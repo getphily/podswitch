@@ -21,9 +21,9 @@ void SettingsDialog::populate_sources(
   video_sources_ = video_sources;
   scene_names_ = scene_names;
   for (int row = 0; row < mappings_table_->rowCount(); ++row) {
-    auto *sc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(row, 0));
+    auto *ss = qobject_cast<QComboBox *>(mappings_table_->cellWidget(row, 0));
     auto *vc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(row, 1));
-    auto *ss = qobject_cast<QComboBox *>(mappings_table_->cellWidget(row, 2));
+    auto *sc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(row, 2));
     if (!sc || !vc || !ss)
       continue;
     QString cs = sc->currentText(), cv = vc->currentText(), csn = ss->currentText();
@@ -55,11 +55,11 @@ void SettingsDialog::build_ui() {
   auto *general_tab = new QWidget(tab_widget_);
   auto *general_vbox = new QVBoxLayout(general_tab);
 
-  auto *mg = new QGroupBox("Mic → Camera Mappings", general_tab);
+  auto *mg = new QGroupBox("Input Source Mapping for Switching Logic", general_tab);
   auto *mgl = new QVBoxLayout(mg);
   mappings_table_ = new QTableWidget(0, 6, mg);
   mappings_table_->setHorizontalHeaderLabels(
-      {"Audio Source", "Video Source", "Scene/Camera", "Priority", "Threshold", ""});
+      {"Scene/Camera", "Video Source", "Audio Source", "Priority", "Threshold", ""});
   mappings_table_->horizontalHeader()->setSectionResizeMode(
       0, QHeaderView::Stretch);
   mappings_table_->horizontalHeader()->setSectionResizeMode(
@@ -173,7 +173,7 @@ void SettingsDialog::add_mapping_row(const CamMapping &m) {
   } else {
       sc->setCurrentText(QString::fromStdString(m.audio_source));
   }
-  mappings_table_->setCellWidget(row, 0, sc);
+  mappings_table_->setCellWidget(row, 2, sc);
 
   auto *vc = new QComboBox();
   vc->addItem("— None —");
@@ -195,7 +195,7 @@ void SettingsDialog::add_mapping_row(const CamMapping &m) {
   for (auto &s : scene_names_)
     ss->addItem(QString::fromStdString(s));
   ss->setCurrentText(QString::fromStdString(m.scene_name));
-  mappings_table_->setCellWidget(row, 2, ss);
+  mappings_table_->setCellWidget(row, 0, ss);
   auto *pc = new QComboBox();
   pc->addItem("Low", (int)Priority::Low);
   pc->addItem("Medium", (int)Priority::Medium);
@@ -261,9 +261,9 @@ void SettingsDialog::save_to_config() {
   std::vector<CamMapping> mappings;
   for (int r = 0; r < mappings_table_->rowCount(); ++r) {
     CamMapping m;
-    auto *sc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 0));
+    auto *ss = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 0));
     auto *vc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 1));
-    auto *ss = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 2));
+    auto *sc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 2));
     auto *pc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 3));
     auto *ts = qobject_cast<QSpinBox *>(mappings_table_->cellWidget(r, 4));
     if (!sc || !vc || !ss || !pc || !ts)
