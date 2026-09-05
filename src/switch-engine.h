@@ -28,6 +28,13 @@ struct CamMapping {
     Priority    priority        = Priority::Medium;
     float       threshold_dbfs  = -40.0f;
     EMA         ema;
+    float       motion_energy   = 0.0f;
+};
+
+struct SourceLevels {
+    std::string source_name;
+    float audio_dbfs;
+    float motion_energy;
 };
 
 using SwitchCallback = std::function<void(const std::string &scene_name)>;
@@ -43,7 +50,7 @@ public:
     void on_audio_level(const std::string &source_name, float dbfs);
     void set_enabled(bool enabled);
     bool is_enabled() const { return enabled_; }
-    std::vector<std::pair<std::string, float>> get_levels() const;
+    std::vector<SourceLevels> get_levels() const;
     void sync_current_scene(const std::string &scene);
 private:
     std::string try_switch();

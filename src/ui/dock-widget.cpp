@@ -103,29 +103,45 @@ void AutoCamDock::refresh_mappings(
                              rw);
     label->setFixedWidth(160);
     label->setToolTip(label->text());
+    auto *vbars = new QVBoxLayout();
+    vbars->setSpacing(2);
     auto *bar = new QProgressBar(rw);
     bar->setRange(0, 100);
     bar->setValue(0);
     bar->setTextVisible(false);
-    bar->setFixedHeight(10);
+    bar->setFixedHeight(6);
     bar->setStyleSheet(
         "QProgressBar{border:1px solid #555;border-radius:2px;background:#222;}"
         "QProgressBar::chunk{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
         "stop:0 #2ecc71,stop:0.7 #f39c12,stop:1.0 #e74c3c);}");
+    vbars->addWidget(bar);
+
+    auto *motion_bar = new QProgressBar(rw);
+    motion_bar->setRange(0, 100);
+    motion_bar->setValue(0);
+    motion_bar->setTextVisible(false);
+    motion_bar->setFixedHeight(4);
+    motion_bar->setStyleSheet(
+        "QProgressBar{border:1px solid #555;border-radius:2px;background:#222;}"
+        "QProgressBar::chunk{background:#3498db;}");
+    vbars->addWidget(motion_bar);
+
     hbox->addWidget(label);
-    hbox->addWidget(bar, 1);
+    hbox->addLayout(vbars, 1);
     vu_layout_->addWidget(rw);
-    vu_rows_.push_back({label, bar});
+    vu_rows_.push_back({label, bar, motion_bar});
   }
 }
 void AutoCamDock::update_vu_meters() {
   auto levels = engine_->get_levels();
   for (const auto &level : levels) {
     for (size_t i = 0; i < vu_rows_.size(); ++i) {
-      if (vu_rows_[i].label->text().startsWith(QString::fromStdString(level.first) + " →")) {
-        int pct = (int)((std::clamp(level.second, -60.0f, 0.0f) + 60.0f) *
+      if (vu_rows_[i].label->text().startsWith(QString::fromStdString(level.source_name) + " →")) {
+        int pct = (int)((std::clamp(level.audio_dbfs, -60.0f, 0.0f) + 60.0f) *
                         (100.0f / 60.0f));
         vu_rows_[i].bar->setValue(pct);
+        int motion_pct = (int)(std::clamp(level.motion_energy, 0.0f, 100.0f));
+        vu_rows_[i].motion_bar->setValue(motion_pct);
         break;
       }
     }

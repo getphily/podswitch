@@ -94,10 +94,10 @@ std::string SwitchEngine::try_switch() {
   blog(LOG_DEBUG, "[switchy] -> '%s'", target.c_str());
   return target;
 }
-std::vector<std::pair<std::string, float>> SwitchEngine::get_levels() const {
+std::vector<SourceLevels> SwitchEngine::get_levels() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::vector<std::pair<std::string, float>> result;
+  std::vector<SourceLevels> result;
   for (const auto &m : mappings_)
-    result.emplace_back(m.audio_source, m.ema.value);
+    result.push_back({m.audio_source, m.ema.value, m.motion_energy});
   return result;
 }
