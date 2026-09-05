@@ -95,14 +95,30 @@ std::string SwitchEngine::try_switch() {
   } else {
     target = fallback_scene_;
   }
-  if (target.empty() || target == current_scene_)
+
+  // If the engine gets confused (crosstalk or silence) but there is no fallback scene assigned,
+  // we do not want it to instantly jump as soon as someone speaks. We enforce a timeout.
+  if (target.empty() || target == "— None —") {
+      auto now = std::chrono::steady_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         now - last_switch_time_)
+                         .count();
+      if (elapsed >= hold_time_ms_) {
+          last_switch_time_ = now;
+      }
+      return "";
+  }
+
+  if (target == current_scene_)
     return "";
+    
   auto now = std::chrono::steady_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                      now - last_switch_time_)
                      .count();
   if (elapsed < hold_time_ms_)
     return "";
+    
   current_scene_ = target;
   last_switch_time_ = now;
   blog(LOG_DEBUG, "[switchy] -> '%s'", target.c_str());
