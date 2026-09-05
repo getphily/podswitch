@@ -5,8 +5,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-04
 ### Added
-- Initial plugin implementation inspired by RØDECaster Video Auto Switching
+- MotionDetector: Safely analyzes luma differences across frames using OBS video filters to extract motion energy.
+- SwitchEngine: Integrates motion energy with audio levels to refine switching logic.
+- SettingsDialog: Scene Generator format and automated camera mappings.
+- Active Scene highlighting in the UI dock.
+- Missing source warnings to prevent broken configurations.
+- Persist Scene Generator settings across restarts.
+
 
 ### Fixed
 - Fixed critical bug where opening the Settings Dialog would wipe existing configurations.

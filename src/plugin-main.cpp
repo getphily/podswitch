@@ -112,7 +112,7 @@ static void on_frontend_event(enum obs_frontend_event event, void *) {
 extern void podswitch_register_motion_filter();
 
 bool obs_module_load() {
-  blog(LOG_INFO, "[podswitch] Loading PodSwitch v1.0.0");
+  blog(LOG_INFO, "[podswitch] Loading PodSwitch v1.1.0");
   podswitch_register_motion_filter();
   g_config = new Config();
   g_engine = new SwitchEngine();
