@@ -59,6 +59,20 @@ static Priority str_prio(const char *s) {
     return Priority::High;
   return Priority::Medium;
 }
+static const char *threshold_str(ThresholdLevel t) {
+  if (t == ThresholdLevel::Quiet)
+    return "quiet";
+  if (t == ThresholdLevel::Loud)
+    return "loud";
+  return "normal";
+}
+static ThresholdLevel str_threshold(const char *s) {
+  if (s && std::string(s) == "quiet")
+    return ThresholdLevel::Quiet;
+  if (s && std::string(s) == "loud")
+    return ThresholdLevel::Loud;
+  return ThresholdLevel::Normal;
+}
 
 Config::Config() { load(); }
 Config::~Config() {}
@@ -91,9 +105,19 @@ void Config::load() {
     m.video_source = obs_data_get_string(item, "video_source");
     m.scene_name = obs_data_get_string(item, "scene_name");
     m.priority = str_prio(obs_data_get_string(item, "priority"));
-    m.threshold_dbfs = (float)obs_data_get_double(item, "threshold_dbfs");
-    if (!obs_data_has_user_value(item, "threshold_dbfs"))
-      m.threshold_dbfs = -40.0f;
+    
+    // Backwards compatibility for old config which stored double
+    if (obs_data_has_user_value(item, "threshold")) {
+      m.threshold = str_threshold(obs_data_get_string(item, "threshold"));
+    } else if (obs_data_has_user_value(item, "threshold_dbfs")) {
+      double old_val = obs_data_get_double(item, "threshold_dbfs");
+      if (old_val <= -45.0) m.threshold = ThresholdLevel::Quiet;
+      else if (old_val >= -25.0) m.threshold = ThresholdLevel::Loud;
+      else m.threshold = ThresholdLevel::Normal;
+    } else {
+      m.threshold = ThresholdLevel::Normal;
+    }
+    
     obs_data_release(item);
     mappings_.push_back(std::move(m));
   }
@@ -115,7 +139,7 @@ void Config::save() const {
     obs_data_set_string(item, "video_source", m.video_source.c_str());
     obs_data_set_string(item, "scene_name", m.scene_name.c_str());
     obs_data_set_string(item, "priority", prio_str(m.priority));
-    obs_data_set_double(item, "threshold_dbfs", m.threshold_dbfs);
+    obs_data_set_string(item, "threshold", threshold_str(m.threshold));
     obs_data_array_push_back(arr, item);
     obs_data_release(item);
   }

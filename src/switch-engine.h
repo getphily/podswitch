@@ -16,6 +16,13 @@ inline float priority_bias_db(Priority p) {
     return 0.0f;
 }
 
+enum class ThresholdLevel { Quiet = 0, Normal = 1, Loud = 2 };
+inline float threshold_level_dbfs(ThresholdLevel t) {
+    if (t == ThresholdLevel::Quiet) return -45.0f;
+    if (t == ThresholdLevel::Loud)  return -25.0f;
+    return -35.0f;
+}
+
 enum class Responsiveness { Relaxed = 0, Neutral = 1, Fast = 2 };
 inline float responsiveness_alpha(Responsiveness r) {
     if (r == Responsiveness::Relaxed) return 0.05f;
@@ -37,7 +44,7 @@ struct CamMapping {
     std::string video_source;
     std::string scene_name;
     Priority    priority        = Priority::Medium;
-    float       threshold_dbfs  = -40.0f;
+    ThresholdLevel threshold    = ThresholdLevel::Normal;
     EMA         ema;
     float       motion_energy   = 0.0f;
 };

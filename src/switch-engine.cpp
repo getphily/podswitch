@@ -80,7 +80,7 @@ std::string SwitchEngine::try_switch() {
   for (const auto &m : mappings_) {
     float score = m.ema.value + priority_bias_db(m.priority) +
                   motion_weight * (m.motion_energy / 10.0f);
-    if (m.ema.value >= m.threshold_dbfs)
+    if (m.ema.value >= threshold_level_dbfs(m.threshold))
       active_speakers++;
     if (score > best) {
       best = score;

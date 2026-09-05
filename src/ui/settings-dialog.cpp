@@ -213,11 +213,12 @@ void SettingsDialog::add_mapping_row(const CamMapping &m) {
   pc->addItem("High", (int)Priority::High);
   pc->setCurrentIndex((int)m.priority);
   mappings_table_->setCellWidget(row, 3, pc);
-  auto *ts = new QSpinBox();
-  ts->setRange(-96, 0);
-  ts->setValue((int)m.threshold_dbfs);
-  ts->setSuffix(" dB");
-  mappings_table_->setCellWidget(row, 4, ts);
+  auto *tc = new QComboBox();
+  tc->addItem("Quiet", (int)ThresholdLevel::Quiet);
+  tc->addItem("Normal", (int)ThresholdLevel::Normal);
+  tc->addItem("Loud", (int)ThresholdLevel::Loud);
+  tc->setCurrentIndex((int)m.threshold);
+  mappings_table_->setCellWidget(row, 4, tc);
   auto *db = new QPushButton("✕");
   db->setFixedWidth(28);
   connect(db, &QPushButton::clicked, this, [this]() {
@@ -287,8 +288,8 @@ void SettingsDialog::save_to_config() {
     auto *vc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 1));
     auto *sc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 2));
     auto *pc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 3));
-    auto *ts = qobject_cast<QSpinBox *>(mappings_table_->cellWidget(r, 4));
-    if (!sc || !vc || !ss || !pc || !ts)
+    auto *tc = qobject_cast<QComboBox *>(mappings_table_->cellWidget(r, 4));
+    if (!sc || !vc || !ss || !pc || !tc)
       continue;
     std::string audio_str = sc->currentText().toStdString();
     if (audio_str.size() > 10 && audio_str.substr(audio_str.size() - 10) == " (Missing)") {
@@ -303,7 +304,7 @@ void SettingsDialog::save_to_config() {
     m.video_source = video_str;
     m.scene_name = ss->currentText().toStdString();
     m.priority = (Priority)pc->currentData().toInt();
-    m.threshold_dbfs = (float)ts->value();
+    m.threshold = (ThresholdLevel)tc->currentData().toInt();
     mappings.push_back(m);
   }
   config_->set_mappings(mappings);
