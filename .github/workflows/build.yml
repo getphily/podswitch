@@ -21,7 +21,7 @@ jobs:
     name: macOS Apple Silicon (arm64)
     runs-on: macos-14   # M1 runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install build tools
         run: brew install ninja cmake
@@ -70,7 +70,7 @@ jobs:
             PodSwitch-1.1.0-macos-arm64.pkg
 
       - name: Upload .pkg artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PodSwitch-macos-arm64
           path: PodSwitch-1.1.0-macos-arm64.pkg
@@ -82,12 +82,12 @@ jobs:
     needs: build-arm64
     if: github.event_name == 'release'
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: PodSwitch-macos-arm64
           path: installers
       - name: List installers
         run: find installers -name "*.pkg" | sort
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: installers/*.pkg
