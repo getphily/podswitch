@@ -1,5 +1,6 @@
 #include "audio-monitor.h"
 #include "config.h"
+#include "motion-detector.h"
 #include "switch-engine.h"
 #include "ui/dock-widget.h"
 #include "ui/settings-dialog.h"
@@ -14,6 +15,7 @@ OBS_MODULE_USE_DEFAULT_LOCALE("podswitch", "en-US")
 static Config *g_config = nullptr;
 static SwitchEngine *g_engine = nullptr;
 static AudioMonitor *g_monitor = nullptr;
+static MotionDetector *g_motion = nullptr;
 static AutoCamDock *g_dock = nullptr;
 static SettingsDialog *g_settings_dlg = nullptr;
 
@@ -45,8 +47,11 @@ static void apply_config() {
   g_engine->set_hold_time_ms(g_config->get_hold_time_ms());
   g_engine->set_fallback_scene(g_config->get_fallback_scene());
   g_monitor->clear();
-  for (auto &m : g_config->get_mappings())
+  if (g_motion) g_motion->clear();
+  for (auto &m : g_config->get_mappings()) {
     g_monitor->add_source(m.audio_source);
+    if (g_motion) g_motion->add_source(m.audio_source);
+  }
   if (g_dock) {
     std::vector<std::pair<std::string, std::string>> pairs;
     for (auto &m : g_config->get_mappings())
@@ -99,6 +104,10 @@ bool obs_module_load() {
   g_monitor = new AudioMonitor();
   g_monitor->set_callback(
       [](const std::string &s, float d) { g_engine->on_audio_level(s, d); });
+  g_motion = new MotionDetector();
+  g_motion->set_callback([](const std::string &s, float e) {
+    if (g_engine) g_engine->update_motion_energy(s, e);
+  });
   g_engine->set_switch_callback(do_switch);
   apply_config();
   obs_frontend_add_event_callback(on_frontend_event, nullptr);
@@ -132,13 +141,16 @@ void obs_module_unload() {
   obs_frontend_remove_event_callback(on_frontend_event, nullptr);
   g_engine->set_enabled(false);
   g_monitor->clear();
+  if (g_motion) g_motion->clear();
   delete g_dock;
   delete g_settings_dlg;
+  delete g_motion;
   delete g_monitor;
   delete g_engine;
   delete g_config;
   g_dock = nullptr;
   g_settings_dlg = nullptr;
+  g_motion = nullptr;
   g_monitor = nullptr;
   g_engine = nullptr;
   g_config = nullptr;

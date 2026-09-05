@@ -48,6 +48,7 @@ public:
     void set_fallback_scene(const std::string &scene_name);
     void set_switch_callback(SwitchCallback cb);
     void on_audio_level(const std::string &source_name, float dbfs);
+    void update_motion_energy(const std::string &source_name, float energy);
     void set_enabled(bool enabled);
     bool is_enabled() const { return enabled_; }
     std::vector<SourceLevels> get_levels() const;

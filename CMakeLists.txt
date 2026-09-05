@@ -76,6 +76,7 @@ set(SRCS
   src/config.cpp
   src/utils.cpp
   src/scene-generator.cpp
+  src/motion-detector.cpp
 )
 if(QT_NS)
   list(APPEND SRCS src/ui/dock-widget.cpp src/ui/settings-dialog.cpp)

@@ -55,6 +55,15 @@ void SwitchEngine::on_audio_level(const std::string &source_name, float dbfs) {
     switch_cb_(target_to_switch);
   }
 }
+void SwitchEngine::update_motion_energy(const std::string &source_name, float energy) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  for (auto &m : mappings_) {
+    if (m.audio_source == source_name) {
+      m.motion_energy = energy;
+      break;
+    }
+  }
+}
 void SwitchEngine::sync_current_scene(const std::string &scene) {
   std::lock_guard<std::mutex> lock(mutex_);
   current_scene_ = scene;
