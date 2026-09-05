@@ -116,3 +116,10 @@ else()
   install(TARGETS podswitch LIBRARY DESTINATION "${_PLUG}/bin/64bit")
   install(DIRECTORY data/ DESTINATION "${_PLUG}/data")
 endif()
+
+if(APPLE AND QT_NS)
+  add_custom_command(TARGET podswitch POST_BUILD
+    COMMAND sh "${CMAKE_SOURCE_DIR}/tools/fix_macos_qt.sh" $<TARGET_FILE:podswitch>
+    COMMENT "Fixing macOS Qt frameworks linking to use OBS internal Frameworks"
+  )
+endif()
