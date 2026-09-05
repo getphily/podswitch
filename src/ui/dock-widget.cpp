@@ -5,7 +5,7 @@
 #include <algorithm>
 
 AutoCamDock::AutoCamDock(SwitchEngine *engine, QWidget *parent)
-    : QDockWidget("PodSwitch", parent), engine_(engine) {
+    : QWidget(parent), engine_(engine) {
   setObjectName("PodSwitchDock");
   build_ui();
   update_timer_ = new QTimer(this);
@@ -15,7 +15,9 @@ AutoCamDock::AutoCamDock(SwitchEngine *engine, QWidget *parent)
 }
 void AutoCamDock::build_ui() {
   auto *root = new QWidget(this);
-  setWidget(root);
+  auto *main_layout = new QVBoxLayout(this);
+  main_layout->setContentsMargins(0, 0, 0, 0);
+  main_layout->addWidget(root);
   auto *vbox = new QVBoxLayout(root);
   vbox->setSpacing(6);
   vbox->setContentsMargins(8, 8, 8, 8);

@@ -11,7 +11,7 @@
 #include <string>
 #include "config.h"
 class SwitchEngine;
-class AutoCamDock : public QDockWidget {
+class AutoCamDock : public QWidget {
     Q_OBJECT
 public:
     explicit AutoCamDock(SwitchEngine *engine, QWidget *parent=nullptr);
