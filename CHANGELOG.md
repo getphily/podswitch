@@ -5,7 +5,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [1.1.0] — 2026-09-04
+## v1.2.0 (September 2026)
 ### Added
 - **Simplified 2-4 Person Scene Generation:** Streamlined the Scene Generator to produce highly logical 2-Person, 3-Person, and 4-Person layouts. Each format now standardizes output with uniform Solos, a dynamic side-by-side Grid Scene, and universally generated Starting Soon and Thank You placeholder scenes.
 - **Improved Scene Organization & Naming:** Scene generator outputs are now perfectly ordered from top to bottom (`🟢 Starting Soon`, `👤 Person 1`, `👥 Split Screen`, etc.) and visually differentiated with intuitive emojis. Input placeholders are neatly nested under a `--- INPUTS ---` separator scene as `📺 Inputs / Person N` to keep the scene list clean.
