@@ -42,6 +42,7 @@ jobs:
             https://github.com/obsproject/obs-studio.git /tmp/obs-studio
           cd /tmp/obs-studio
           git sparse-checkout set libobs UI/obs-frontend-api
+          mkdir -p build_universal/config
 
       - name: Configure PodSwitch
         run: |
