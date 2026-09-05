@@ -13,9 +13,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Active Scene highlighting in the UI dock.
 - Missing source warnings to prevent broken configurations.
 - Persist Scene Generator settings across restarts.
-
+- **Onboarding Setup Guide:** Added inline instructions and empty-state validation to the Scene Generator tab to guide users through adding OBS sources first.
 
 ### Fixed
+- **macOS Crash on Startup:** Fixed a severe Qt ABI mismatch where Homebrew Qt 6.11.2 conflicted with OBS internal Qt 6.11.1 by dynamically patching binary library paths at compile-time.
 - Fixed critical bug where opening the Settings Dialog would wipe existing configurations.
 - Fixed UI layout memory leak in AutoCamDock where VU meters caused infinite layout stacking.
 - Fixed severe memory leak in `get_scene_names()` array processing.
