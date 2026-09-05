@@ -75,6 +75,7 @@ set(SRCS
   src/switch-engine.cpp
   src/config.cpp
   src/utils.cpp
+  src/scene-generator.cpp
 )
 if(QT_NS)
   list(APPEND SRCS src/ui/dock-widget.cpp src/ui/settings-dialog.cpp)

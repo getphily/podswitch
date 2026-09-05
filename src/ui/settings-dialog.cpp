@@ -36,10 +36,27 @@ void SettingsDialog::populate_sources(
   QString cf = fallback_combo_->currentText();
   fallback_combo_->clear();
   fallback_combo_->addItem("— None —", "");
-  for (auto &s : scene_names_)
+  for (auto &s : scene_names_) {
     fallback_combo_->addItem(QString::fromStdString(s),
                              QString::fromStdString(s));
+  }
   fallback_combo_->setCurrentText(cf);
+
+  QString h1 = gen_host1_combo_->currentText();
+  QString g1 = gen_guest1_combo_->currentText();
+  QString g2 = gen_guest2_combo_->currentText();
+  gen_host1_combo_->clear();
+  gen_guest1_combo_->clear();
+  gen_guest2_combo_->clear();
+  for (auto &s : scene_names_) {
+    QString qstr = QString::fromStdString(s);
+    gen_host1_combo_->addItem(qstr, qstr);
+    gen_guest1_combo_->addItem(qstr, qstr);
+    gen_guest2_combo_->addItem(qstr, qstr);
+  }
+  gen_host1_combo_->setCurrentText(h1);
+  gen_guest1_combo_->setCurrentText(g1);
+  gen_guest2_combo_->setCurrentText(g2);
   if (!config_loaded_) {
     load_from_config();
     config_loaded_ = true;
@@ -47,7 +64,13 @@ void SettingsDialog::populate_sources(
 }
 void SettingsDialog::build_ui() {
   auto *vbox = new QVBoxLayout(this);
-  auto *mg = new QGroupBox("Mic → Camera Mappings", this);
+  tab_widget_ = new QTabWidget(this);
+
+  // --- General Tab ---
+  auto *general_tab = new QWidget(tab_widget_);
+  auto *general_vbox = new QVBoxLayout(general_tab);
+
+  auto *mg = new QGroupBox("Mic → Camera Mappings", general_tab);
   auto *mgl = new QVBoxLayout(mg);
   mappings_table_ = new QTableWidget(0, 5, mg);
   mappings_table_->setHorizontalHeaderLabels(
@@ -68,7 +91,7 @@ void SettingsDialog::build_ui() {
   br->addWidget(remove_btn_);
   br->addStretch();
   mgl->addLayout(br);
-  vbox->addWidget(mg);
+  general_vbox->addWidget(mg);
   connect(add_btn_, &QPushButton::clicked, this,
           &SettingsDialog::on_add_mapping);
   connect(remove_btn_, &QPushButton::clicked, this,
@@ -106,7 +129,35 @@ void SettingsDialog::build_ui() {
   tr->addWidget(fade_duration_spin_);
   tr->addStretch();
   form->addRow("Transition:", tr);
-  vbox->addWidget(gg);
+  general_vbox->addWidget(gg);
+  tab_widget_->addTab(general_tab, "General");
+
+  // --- Scene Generator Tab ---
+  auto *gen_tab = new QWidget(tab_widget_);
+  auto *gen_vbox = new QVBoxLayout(gen_tab);
+  auto *gen_form = new QFormLayout();
+
+  gen_format_combo_ = new QComboBox(gen_tab);
+  gen_format_combo_->addItem("1-on-1 Interview", 0);
+  gen_format_combo_->addItem("Power Dynamic (3-person)", 1);
+  gen_form->addRow("Podcast Format:", gen_format_combo_);
+
+  gen_host1_combo_ = new QComboBox(gen_tab);
+  gen_guest1_combo_ = new QComboBox(gen_tab);
+  gen_guest2_combo_ = new QComboBox(gen_tab);
+  gen_form->addRow("Host 1 Video Source:", gen_host1_combo_);
+  gen_form->addRow("Guest 1 Video Source:", gen_guest1_combo_);
+  gen_form->addRow("Guest 2 Video Source:", gen_guest2_combo_);
+
+  auto *gen_btn = new QPushButton("✨ Generate Podcast Scenes", gen_tab);
+  connect(gen_btn, &QPushButton::clicked, this, &SettingsDialog::on_generate_scenes);
+
+  gen_vbox->addLayout(gen_form);
+  gen_vbox->addStretch();
+  gen_vbox->addWidget(gen_btn);
+  tab_widget_->addTab(gen_tab, "Scene Generator");
+
+  vbox->addWidget(tab_widget_);
   auto *bb = new QDialogButtonBox(
       QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel,
       this);
@@ -219,3 +270,20 @@ void SettingsDialog::on_ok() {
   save_to_config();
   accept();
 }
+
+#include "../scene-generator.h"
+#include <QMessageBox>
+
+void SettingsDialog::on_generate_scenes() {
+  SceneGenSettings sgs;
+  sgs.format = (PodcastFormat)gen_format_combo_->currentData().toInt();
+  sgs.host1_source = gen_host1_combo_->currentText().toStdString();
+  sgs.guest1_source = gen_guest1_combo_->currentText().toStdString();
+  sgs.guest2_source = gen_guest2_combo_->currentText().toStdString();
+  sgs.audio_sources = audio_sources_; // For now, put all known audio sources in the live mix
+
+  if (SceneGenerator::generate(sgs)) {
+    QMessageBox::information(this, "Scenes Generated", "Successfully generated podcast scenes!");
+  }
+}
+
