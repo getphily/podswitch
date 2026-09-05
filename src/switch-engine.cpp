@@ -12,6 +12,14 @@ void SwitchEngine::set_mappings(std::vector<CamMapping> mappings) {
   for (auto &m : mappings)
     m.ema.alpha = alpha;
   mappings_ = std::move(mappings);
+  audio_to_mapping_.clear();
+  video_to_mapping_.clear();
+  for (size_t i = 0; i < mappings_.size(); ++i) {
+      if (!mappings_[i].audio_source.empty())
+          audio_to_mapping_[mappings_[i].audio_source] = i;
+      if (!mappings_[i].video_source.empty())
+          video_to_mapping_[mappings_[i].video_source] = i;
+  }
 }
 void SwitchEngine::set_responsiveness(Responsiveness r) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -47,11 +55,9 @@ void SwitchEngine::on_audio_level(const std::string &source_name, float dbfs) {
   std::string target_to_switch;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    for (auto &m : mappings_) {
-      if (m.audio_source == source_name) {
-        m.ema.update(dbfs);
-        break;
-      }
+    auto it = audio_to_mapping_.find(source_name);
+    if (it != audio_to_mapping_.end()) {
+        mappings_[it->second].ema.update(dbfs);
     }
     target_to_switch = try_switch();
   }
@@ -61,11 +67,9 @@ void SwitchEngine::on_audio_level(const std::string &source_name, float dbfs) {
 }
 void SwitchEngine::update_motion_energy(const std::string &source_name, float energy) {
   std::lock_guard<std::mutex> lock(mutex_);
-  for (auto &m : mappings_) {
-    if (!m.video_source.empty() && m.video_source == source_name) {
-      m.motion_energy = energy;
-      break;
-    }
+  auto it = video_to_mapping_.find(source_name);
+  if (it != video_to_mapping_.end()) {
+      mappings_[it->second].motion_energy = energy;
   }
 }
 void SwitchEngine::sync_current_scene(const std::string &scene) {

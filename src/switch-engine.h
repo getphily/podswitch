@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <mutex>
+#include <unordered_map>
 #include <atomic>
 #include <functional>
 #include <cfloat>
@@ -67,6 +68,8 @@ private:
     std::string try_switch();
     mutable std::mutex mutex_;
     std::vector<CamMapping> mappings_;
+    std::unordered_map<std::string, size_t> audio_to_mapping_;
+    std::unordered_map<std::string, size_t> video_to_mapping_;
     Responsiveness responsiveness_ = Responsiveness::Neutral;
     MotionInfluence motion_influence_ = MotionInfluence::Moderate;
     int hold_time_ms_ = 800;
