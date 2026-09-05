@@ -62,18 +62,25 @@ void SwitchEngine::sync_current_scene(const std::string &scene) {
 std::string SwitchEngine::try_switch() {
   float best = -FLT_MAX;
   const CamMapping *winner = nullptr;
+  int active_speakers = 0;
   for (const auto &m : mappings_) {
     if (m.ema.value < m.threshold_dbfs)
       continue;
+    active_speakers++;
     float w = m.ema.value + priority_bias_db(m.priority);
     if (w > best) {
       best = w;
       winner = &m;
     }
   }
-  std::string target = winner
-                           ? winner->scene_name
-                           : (!fallback_scene_.empty() ? fallback_scene_ : "");
+  std::string target;
+  if (active_speakers >= 2) {
+    target = fallback_scene_;
+  } else if (active_speakers == 1 && winner) {
+    target = winner->scene_name;
+  } else {
+    target = fallback_scene_;
+  }
   if (target.empty() || target == current_scene_)
     return "";
   auto now = std::chrono::steady_clock::now();
