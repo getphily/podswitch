@@ -30,4 +30,5 @@ private:
     static obs_scene_t *create_audio_mix_scene(const std::vector<std::string> &audio_sources);
     static void generate_1_on_1(const SceneGenSettings &settings, obs_source_t *audio_mix);
     static void generate_power_dynamic(const SceneGenSettings &settings, obs_source_t *audio_mix);
+    static void generate_fallback(obs_source_t *audio_mix);
 };

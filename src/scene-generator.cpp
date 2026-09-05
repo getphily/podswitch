@@ -5,7 +5,7 @@
 // Names we manage — used for clean-slate deletion
 static const char *kGeneratedScenes[] = {
     "Host 1 Solo", "Guest 1 Solo", "Guest 2 Solo",
-    "Split Screen", "\U0001F399\uFE0F Live Audio Mix", nullptr
+    "Split Screen", "Fallback", "\U0001F399\uFE0F Live Audio Mix", nullptr
 };
 
 void SceneGenerator::delete_existing_generated_scenes() {
@@ -52,13 +52,9 @@ static void add_video_to_scene(obs_scene_t *scene,
     uint32_t base_h = obs_source_get_height(video_source);
 
     if (item && base_w > 0 && base_h > 0) {
-        struct obs_video_info ovi;
+        // Enforce exactly 1920x1080 as per General Guidance
         float canvas_w = 1920.0f;
         float canvas_h = 1080.0f;
-        if (obs_get_video_info(&ovi)) {
-            canvas_w = (float)ovi.base_width;
-            canvas_h = (float)ovi.base_height;
-        }
 
         if (region_w < 0) region_w = canvas_w;
         if (region_h < 0) region_h = canvas_h;
@@ -158,6 +154,27 @@ void SceneGenerator::generate_power_dynamic(const SceneGenSettings &settings,
     obs_scene_release(split_scene);
 }
 
+void SceneGenerator::generate_fallback(obs_source_t *audio_mix) {
+    obs_scene_t *fallback_scene = obs_scene_create("Fallback");
+    
+    // Create a color source (dark gray) for the placeholder
+    obs_data_t *settings = obs_data_create();
+    obs_data_set_int(settings, "color", 0xFF202020);
+    obs_data_set_int(settings, "width", 1920);
+    obs_data_set_int(settings, "height", 1080);
+    
+    obs_source_t *color_bg = obs_source_create("color_source", "Placeholder Background", settings, nullptr);
+    obs_data_release(settings);
+    
+    if (color_bg) {
+        obs_scene_add(fallback_scene, color_bg);
+        obs_source_release(color_bg);
+    }
+    
+    add_audio_mix_to_scene(fallback_scene, audio_mix);
+    obs_scene_release(fallback_scene);
+}
+
 bool SceneGenerator::generate(const SceneGenSettings &settings) {
     delete_existing_generated_scenes();
 
@@ -168,6 +185,8 @@ bool SceneGenerator::generate(const SceneGenSettings &settings) {
         generate_1_on_1(settings, audio_mix);
     else
         generate_power_dynamic(settings, audio_mix);
+        
+    generate_fallback(audio_mix);
 
     if (audio_scene) {
         obs_scene_release(audio_scene);

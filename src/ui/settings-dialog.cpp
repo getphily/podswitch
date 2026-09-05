@@ -407,6 +407,8 @@ void SettingsDialog::on_ok() {
 
 #include "../scene-generator.h"
 #include <QMessageBox>
+#include <algorithm>
+#include <QInputDialog>
 
 void SettingsDialog::on_generate_scenes() {
   SceneGenSettings sgs;
@@ -431,6 +433,14 @@ void SettingsDialog::on_generate_scenes() {
   }
 
   if (SceneGenerator::generate(sgs)) {
+    // Add newly generated scenes to cached list so they can be selected
+    const char *new_scenes[] = {"Host 1 Solo", "Guest 1 Solo", "Guest 2 Solo", "Split Screen", "Fallback", "\U0001F399\uFE0F Live Audio Mix"};
+    for (const char *ns : new_scenes) {
+        if (std::find(scene_names_.begin(), scene_names_.end(), ns) == scene_names_.end()) {
+            scene_names_.push_back(ns);
+        }
+    }
+    
     mappings_table_->setRowCount(0);
     
     auto find_audio = [&](const std::string& v) -> std::string {
@@ -467,8 +477,12 @@ void SettingsDialog::on_generate_scenes() {
         add_mapping_row(m3);
     }
 
-    int fb_idx = fallback_combo_->findData("Split Screen");
-    if (fb_idx >= 0) fallback_combo_->setCurrentIndex(fb_idx);
+    int fb_idx = fallback_combo_->findText("Fallback");
+    if (fb_idx < 0) {
+        fallback_combo_->addItem("Fallback");
+        fb_idx = fallback_combo_->findText("Fallback");
+    }
+    fallback_combo_->setCurrentIndex(fb_idx);
     
     QMessageBox::information(this, "Scenes Generated", "Successfully generated podcast scenes and auto-populated mappings!");
     save_to_config();
