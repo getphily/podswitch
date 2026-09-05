@@ -35,7 +35,7 @@ static std::vector<std::string> get_scene_names() {
   if (n) {
     for (char **p = n; *p; ++p)
       r.push_back(*p);
-    bfree_void_array((void **)n);
+    bfree(n);
   }
   return r;
 }
@@ -56,29 +56,27 @@ static void apply_config() {
 }
 static void do_switch(const std::string &scene_name) {
   auto *name = new std::string(scene_name);
-  if (!obs_queue_task(
-          OBS_TASK_UI,
-          [](void *param) {
-            auto *name = static_cast<std::string *>(param);
-            if (g_config && g_config->get_transition_fade()) {
-              obs_source_t *ft = obs_get_source_by_name("Fade");
-              if (ft) {
-                obs_frontend_set_current_transition(ft);
-                obs_frontend_set_transition_duration(
-                    g_config->get_fade_duration_ms());
-                obs_source_release(ft);
-              }
-            }
-            obs_source_t *scene = obs_get_source_by_name(name->c_str());
-            if (scene) {
-              obs_frontend_set_current_scene(scene);
-              obs_source_release(scene);
-            }
-            delete name;
-          },
-          name, false)) {
-    delete name;
-  }
+  obs_queue_task(
+      OBS_TASK_UI,
+      [](void *param) {
+        auto *name = static_cast<std::string *>(param);
+        if (g_config && g_config->get_transition_fade()) {
+          obs_source_t *ft = obs_get_source_by_name("Fade");
+          if (ft) {
+            obs_frontend_set_current_transition(ft);
+            obs_frontend_set_transition_duration(
+                g_config->get_fade_duration_ms());
+            obs_source_release(ft);
+          }
+        }
+        obs_source_t *scene = obs_get_source_by_name(name->c_str());
+        if (scene) {
+          obs_frontend_set_current_scene(scene);
+          obs_source_release(scene);
+        }
+        delete name;
+      },
+      name, false);
 }
 static void on_frontend_event(enum obs_frontend_event event, void *) {
   if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING ||

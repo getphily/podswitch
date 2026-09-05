@@ -6,8 +6,10 @@
 #include <QProgressBar>
 #include <QVBoxLayout>
 #include <QComboBox>
+#include <QWidget>
 #include <vector>
 #include <string>
+#include "config.h"
 class SwitchEngine;
 class AutoCamDock : public QDockWidget {
     Q_OBJECT
