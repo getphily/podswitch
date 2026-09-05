@@ -4,6 +4,7 @@
 
 // Names we manage — used for clean-slate deletion
 static const char *kGeneratedScenes[] = {
+    "Host 1 Input", "Guest 1 Input", "Guest 2 Input",
     "Host 1 Solo", "Guest 1 Solo", "Guest 2 Solo",
     "Split Screen", "Fallback", "\U0001F399\uFE0F Live Audio Mix", nullptr
 };
@@ -105,51 +106,92 @@ static void add_audio_mix_to_scene(obs_scene_t *scene,
         obs_scene_add(scene, audio_mix);
 }
 
+void SceneGenerator::generate_input_scene(const char *name) {
+    obs_scene_t *scene = obs_scene_create(name);
+    
+    // Create a color source (dark gray) for the placeholder
+    obs_data_t *settings = obs_data_create();
+    obs_data_set_int(settings, "color", 0xFF303030);
+    obs_data_set_int(settings, "width", 1920);
+    obs_data_set_int(settings, "height", 1080);
+    
+    obs_source_t *color_bg = obs_source_create("color_source", (std::string(name) + " Background").c_str(), settings, nullptr);
+    obs_data_release(settings);
+    
+    if (color_bg) {
+        obs_scene_add(scene, color_bg);
+        obs_source_release(color_bg);
+    }
+    
+    // Create a text source for the placeholder
+    obs_data_t *text_settings = obs_data_create();
+    obs_data_set_string(text_settings, "text", (std::string("Add ") + name + " Here").c_str());
+    obs_source_t *text_src = obs_source_create("text_ft2_source_v2", (std::string(name) + " Text").c_str(), text_settings, nullptr);
+    obs_data_release(text_settings);
+    
+    if (text_src) {
+        obs_sceneitem_t *item = obs_scene_add(scene, text_src);
+        struct vec2 pos;
+        vec2_set(&pos, 100, 100);
+        obs_sceneitem_set_pos(item, &pos);
+        obs_source_release(text_src);
+    }
+    
+    obs_scene_release(scene);
+}
+
 void SceneGenerator::generate_1_on_1(const SceneGenSettings &settings,
                                      obs_source_t *audio_mix) {
+    generate_input_scene("Host 1 Input");
+    generate_input_scene("Guest 1 Input");
+
     // Host 1 Solo
     obs_scene_t *host_scene = obs_scene_create("Host 1 Solo");
-    add_video_to_scene(host_scene, settings.host1_source, true);
+    add_video_to_scene(host_scene, "Host 1 Input", true);
     add_audio_mix_to_scene(host_scene, audio_mix);
     obs_scene_release(host_scene);
 
     // Guest 1 Solo
     obs_scene_t *guest_scene = obs_scene_create("Guest 1 Solo");
-    add_video_to_scene(guest_scene, settings.guest1_source, true);
+    add_video_to_scene(guest_scene, "Guest 1 Input", true);
     add_audio_mix_to_scene(guest_scene, audio_mix);
     obs_scene_release(guest_scene);
 
     // 50/50 Split Screen
     obs_scene_t *split_scene = obs_scene_create("Split Screen");
-    add_video_to_scene(split_scene, settings.host1_source,  false, 0,   0, 960, 1080);
-    add_video_to_scene(split_scene, settings.guest1_source, false, 960, 0, 960, 1080);
+    add_video_to_scene(split_scene, "Host 1 Input",  false, 0,   0, 960, 1080);
+    add_video_to_scene(split_scene, "Guest 1 Input", false, 960, 0, 960, 1080);
     add_audio_mix_to_scene(split_scene, audio_mix);
     obs_scene_release(split_scene);
 }
 
 void SceneGenerator::generate_power_dynamic(const SceneGenSettings &settings,
                                             obs_source_t *audio_mix) {
+    generate_input_scene("Host 1 Input");
+    generate_input_scene("Guest 1 Input");
+    generate_input_scene("Guest 2 Input");
+
     // Solos
     obs_scene_t *host_scene = obs_scene_create("Host 1 Solo");
-    add_video_to_scene(host_scene, settings.host1_source, true);
+    add_video_to_scene(host_scene, "Host 1 Input", true);
     add_audio_mix_to_scene(host_scene, audio_mix);
     obs_scene_release(host_scene);
 
     obs_scene_t *g1_scene = obs_scene_create("Guest 1 Solo");
-    add_video_to_scene(g1_scene, settings.guest1_source, true);
+    add_video_to_scene(g1_scene, "Guest 1 Input", true);
     add_audio_mix_to_scene(g1_scene, audio_mix);
     obs_scene_release(g1_scene);
 
     obs_scene_t *g2_scene = obs_scene_create("Guest 2 Solo");
-    add_video_to_scene(g2_scene, settings.guest2_source, true);
+    add_video_to_scene(g2_scene, "Guest 2 Input", true);
     add_audio_mix_to_scene(g2_scene, audio_mix);
     obs_scene_release(g2_scene);
 
     // Asymmetrical Split: Host 50% left, Guests stacked 25% each on right
     obs_scene_t *split_scene = obs_scene_create("Split Screen");
-    add_video_to_scene(split_scene, settings.host1_source,  false, 0,   0,   960, 1080);
-    add_video_to_scene(split_scene, settings.guest1_source, false, 960, 0,   960, 540);
-    add_video_to_scene(split_scene, settings.guest2_source, false, 960, 540, 960, 540);
+    add_video_to_scene(split_scene, "Host 1 Input",  false, 0,   0,   960, 1080);
+    add_video_to_scene(split_scene, "Guest 1 Input", false, 960, 0,   960, 540);
+    add_video_to_scene(split_scene, "Guest 2 Input", false, 960, 540, 960, 540);
     add_audio_mix_to_scene(split_scene, audio_mix);
     obs_scene_release(split_scene);
 }

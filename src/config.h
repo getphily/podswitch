@@ -23,12 +23,6 @@ public:
 
     int get_gen_format() const { return gen_format_; }
     void set_gen_format(int f) { gen_format_ = f; }
-    std::string get_gen_host() const { return gen_host_; }
-    void set_gen_host(const std::string &s) { gen_host_ = s; }
-    std::string get_gen_guest1() const { return gen_guest1_; }
-    void set_gen_guest1(const std::string &s) { gen_guest1_ = s; }
-    std::string get_gen_guest2() const { return gen_guest2_; }
-    void set_gen_guest2(const std::string &s) { gen_guest2_ = s; }
 
     void load(); void save() const;
 private:
@@ -41,9 +35,6 @@ private:
     int fade_duration_ms_ = 300;
     
     int gen_format_ = 0;
-    std::string gen_host_;
-    std::string gen_guest1_;
-    std::string gen_guest2_;
 
     std::string get_config_path() const;
 };

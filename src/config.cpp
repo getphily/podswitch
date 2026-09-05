@@ -74,9 +74,6 @@ void Config::load() {
   if (fade_duration_ms_ <= 0)
     fade_duration_ms_ = 300;
   gen_format_ = (int)obs_data_get_int(d, "gen_format");
-  gen_host_ = obs_data_get_string(d, "gen_host");
-  gen_guest1_ = obs_data_get_string(d, "gen_guest1");
-  gen_guest2_ = obs_data_get_string(d, "gen_guest2");
   obs_data_array_t *arr = obs_data_get_array(d, "mappings");
   size_t n = arr ? obs_data_array_count(arr) : 0;
   mappings_.clear();
@@ -107,9 +104,6 @@ void Config::save() const {
   obs_data_set_bool(d, "transition_fade", transition_fade_);
   obs_data_set_int(d, "fade_duration_ms", fade_duration_ms_);
   obs_data_set_int(d, "gen_format", gen_format_);
-  obs_data_set_string(d, "gen_host", gen_host_.c_str());
-  obs_data_set_string(d, "gen_guest1", gen_guest1_.c_str());
-  obs_data_set_string(d, "gen_guest2", gen_guest2_.c_str());
   obs_data_array_t *arr = obs_data_array_create();
   for (const auto &m : mappings_) {
     obs_data_t *item = obs_data_create();

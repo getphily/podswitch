@@ -9,9 +9,6 @@ enum class PodcastFormat {
 
 struct SceneGenSettings {
     PodcastFormat format = PodcastFormat::OneOnOne;
-    std::string host1_source;
-    std::string guest1_source;
-    std::string guest2_source; // For Power Dynamic
     std::vector<std::string> audio_sources;
 };
 
@@ -28,6 +25,7 @@ public:
 private:
     static void delete_existing_generated_scenes();
     static obs_scene_t *create_audio_mix_scene(const std::vector<std::string> &audio_sources);
+    static void generate_input_scene(const char *name);
     static void generate_1_on_1(const SceneGenSettings &settings, obs_source_t *audio_mix);
     static void generate_power_dynamic(const SceneGenSettings &settings, obs_source_t *audio_mix);
     static void generate_fallback(obs_source_t *audio_mix);

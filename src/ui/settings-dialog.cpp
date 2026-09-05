@@ -50,35 +50,10 @@ void SettingsDialog::populate_sources(
   }
   fallback_combo_->setCurrentText(cf);
 
-  QString h1 = gen_host1_combo_->currentText();
-  QString g1 = gen_guest1_combo_->currentText();
-  QString g2 = gen_guest2_combo_->currentText();
-  gen_host1_combo_->clear();
-  gen_guest1_combo_->clear();
-  gen_guest2_combo_->clear();
-  gen_host1_combo_->addItem("— Select Source —");
-  gen_guest1_combo_->addItem("— Select Source —");
-  gen_guest2_combo_->addItem("— Select Source —");
-  for (auto &s : video_sources_) {
-    QString qstr = QString::fromStdString(s);
-    gen_host1_combo_->addItem(qstr, qstr);
-    gen_guest1_combo_->addItem(qstr, qstr);
-    gen_guest2_combo_->addItem(qstr, qstr);
-  }
-  gen_host1_combo_->setCurrentText(h1);
-  gen_guest1_combo_->setCurrentText(g1);
-  gen_guest2_combo_->setCurrentText(g2);
+
   if (!config_loaded_) {
     load_from_config();
     config_loaded_ = true;
-  }
-  
-  if (video_sources_.empty()) {
-    gen_btn_->setEnabled(false);
-    gen_btn_->setToolTip("Please add Video Capture Device sources to OBS first.");
-  } else {
-    gen_btn_->setEnabled(true);
-    gen_btn_->setToolTip("");
   }
 }
 void SettingsDialog::build_ui() {
@@ -176,10 +151,9 @@ void SettingsDialog::build_ui() {
   auto *guide_label = new QLabel(
       "<b>Podcast Setup Workflow:</b><br/>"
       "<ol style='margin-top: 4px; margin-bottom: 0px; padding-left: 20px;'>"
-      "<li><b>Add to OBS:</b> Add your physical Camera and Mic sources directly into OBS first.</li>"
-      "<li><b>Format:</b> Select your podcast format below.</li>"
-      "<li><b>Video:</b> Assign your camera sources to each speaker and click <i>Generate</i>.</li>"
-      "<li><b>Audio:</b> Go to the <i>General</i> tab to map your microphones to the new scenes.</li>"
+      "<li><b>Format:</b> Select your podcast format below and click <i>Generate</i>.</li>"
+      "<li><b>Video:</b> Go to the newly generated <i>Input Scenes</i> in OBS and add your cameras.</li>"
+      "<li><b>Audio:</b> Go to the <i>General</i> tab here to map your microphones to the new scenes.</li>"
       "</ol>",
       guide_frame);
   guide_label->setWordWrap(true);
@@ -193,24 +167,6 @@ void SettingsDialog::build_ui() {
   gen_format_combo_->addItem("1-on-1 Interview", 0);
   gen_format_combo_->addItem("Power Dynamic (3-person)", 1);
   gen_form->addRow("Podcast Format:", gen_format_combo_);
-
-  gen_host1_combo_ = new QComboBox(gen_tab);
-  gen_guest1_combo_ = new QComboBox(gen_tab);
-  gen_guest2_combo_ = new QComboBox(gen_tab);
-  gen_form->addRow("Host 1 Video Source:", gen_host1_combo_);
-  gen_form->addRow("Guest 1 Video Source:", gen_guest1_combo_);
-  gen_form->addRow("Guest 2 Video Source:", gen_guest2_combo_);
-
-  connect(gen_format_combo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-          this, [this, gen_form](int index) {
-            bool show_guest2 = (index == 1);
-            gen_guest2_combo_->setVisible(show_guest2);
-            if (auto *label = gen_form->labelForField(gen_guest2_combo_)) {
-                label->setVisible(show_guest2);
-            }
-          });
-  gen_guest2_combo_->setVisible(false);
-  if (auto *label = gen_form->labelForField(gen_guest2_combo_)) label->setVisible(false);
 
   gen_btn_ = new QPushButton("✨ Generate Podcast Scenes", gen_tab);
   connect(gen_btn_, &QPushButton::clicked, this, &SettingsDialog::on_generate_scenes);
@@ -338,10 +294,6 @@ void SettingsDialog::load_from_config() {
   int format = config_->get_gen_format();
   int f_idx = gen_format_combo_->findData(format);
   if (f_idx >= 0) gen_format_combo_->setCurrentIndex(f_idx);
-  
-  gen_host1_combo_->setCurrentText(QString::fromStdString(config_->get_gen_host()));
-  gen_guest1_combo_->setCurrentText(QString::fromStdString(config_->get_gen_guest1()));
-  gen_guest2_combo_->setCurrentText(QString::fromStdString(config_->get_gen_guest2()));
 }
 void SettingsDialog::save_to_config() {
   std::vector<CamMapping> mappings;
@@ -392,9 +344,6 @@ void SettingsDialog::save_to_config() {
   config_->set_fade_duration_ms(fade_duration_spin_->value());
 
   config_->set_gen_format(gen_format_combo_->currentData().toInt());
-  config_->set_gen_host(gen_host1_combo_->currentText().toStdString());
-  config_->set_gen_guest1(gen_guest1_combo_->currentText().toStdString());
-  config_->set_gen_guest2(gen_guest2_combo_->currentText().toStdString());
 
   config_->save();
   emit settings_applied(*config_);
@@ -413,31 +362,21 @@ void SettingsDialog::on_ok() {
 void SettingsDialog::on_generate_scenes() {
   SceneGenSettings sgs;
   sgs.format = (PodcastFormat)gen_format_combo_->currentData().toInt();
-  sgs.host1_source = gen_host1_combo_->currentText().toStdString();
-  sgs.guest1_source = gen_guest1_combo_->currentText().toStdString();
-  sgs.guest2_source = gen_guest2_combo_->currentText().toStdString();
   sgs.audio_sources = audio_sources_;
-
-  if (sgs.host1_source == "— Select Source —" || sgs.guest1_source == "— Select Source —") {
-      QMessageBox::warning(this, "Validation Error", "Please select valid video sources for Host 1 and Guest 1.");
-      return;
-  }
-  if (sgs.format == PodcastFormat::PowerDynamic && sgs.guest2_source == "— Select Source —") {
-      QMessageBox::warning(this, "Validation Error", "Please select a valid video source for Guest 2.");
-      return;
-  }
-  if (sgs.host1_source == sgs.guest1_source || 
-      (sgs.format == PodcastFormat::PowerDynamic && (sgs.host1_source == sgs.guest2_source || sgs.guest1_source == sgs.guest2_source))) {
-      QMessageBox::warning(this, "Validation Error", "Sources must be unique.");
-      return;
-  }
 
   if (SceneGenerator::generate(sgs)) {
     // Add newly generated scenes to cached list so they can be selected
-    const char *new_scenes[] = {"Host 1 Solo", "Guest 1 Solo", "Guest 2 Solo", "Split Screen", "Fallback", "\U0001F399\uFE0F Live Audio Mix"};
+    const char *new_scenes[] = {"Host 1 Input", "Guest 1 Input", "Guest 2 Input", "Host 1 Solo", "Guest 1 Solo", "Guest 2 Solo", "Split Screen", "Fallback", "\U0001F399\uFE0F Live Audio Mix"};
     for (const char *ns : new_scenes) {
         if (std::find(scene_names_.begin(), scene_names_.end(), ns) == scene_names_.end()) {
             scene_names_.push_back(ns);
+        }
+    }
+    
+    // Also add them to video_sources_ so they can be selected in the video mapping!
+    for (const char *ns : new_scenes) {
+        if (std::find(video_sources_.begin(), video_sources_.end(), ns) == video_sources_.end()) {
+            video_sources_.push_back(ns);
         }
     }
     
@@ -445,33 +384,29 @@ void SettingsDialog::on_generate_scenes() {
     
     auto find_audio = [&](const std::string& v) -> std::string {
         if (!audio_sources_.empty()) {
-            for (const auto& a : audio_sources_) {
-                // If names are somewhat matching or just pick first for now
-                // We'll just return the first available if not found
-            }
             return audio_sources_[0]; 
         }
         return "";
     };
 
     CamMapping m1;
-    m1.video_source = sgs.host1_source;
-    m1.audio_source = find_audio(sgs.host1_source);
+    m1.video_source = "Host 1 Input";
+    m1.audio_source = find_audio("Host 1 Input");
     m1.scene_name = "Host 1 Solo";
     m1.priority = Priority::High;
     add_mapping_row(m1);
 
     CamMapping m2;
-    m2.video_source = sgs.guest1_source;
-    m2.audio_source = audio_sources_.size() > 1 ? audio_sources_[1] : find_audio(sgs.guest1_source);
+    m2.video_source = "Guest 1 Input";
+    m2.audio_source = audio_sources_.size() > 1 ? audio_sources_[1] : find_audio("Guest 1 Input");
     m2.scene_name = "Guest 1 Solo";
     m2.priority = Priority::Medium;
     add_mapping_row(m2);
 
     if (sgs.format == PodcastFormat::PowerDynamic) {
         CamMapping m3;
-        m3.video_source = sgs.guest2_source;
-        m3.audio_source = audio_sources_.size() > 2 ? audio_sources_[2] : find_audio(sgs.guest2_source);
+        m3.video_source = "Guest 2 Input";
+        m3.audio_source = audio_sources_.size() > 2 ? audio_sources_[2] : find_audio("Guest 2 Input");
         m3.scene_name = "Guest 2 Solo";
         m3.priority = Priority::Medium;
         add_mapping_row(m3);
