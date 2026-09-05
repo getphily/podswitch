@@ -58,10 +58,10 @@ jobs:
 
       - name: Create .pkg installer
         run: |
-          PLUGIN="$RUNNER_TEMP/stage/Library/Application Support/obs-studio/plugins/podswitch"
-          mkdir -p "$PLUGIN/bin" "$PLUGIN/data"
-          find build -name "*.so" -exec cp {} "$PLUGIN/bin/" \;
-          cp -r data/. "$PLUGIN/data/"
+          PLUGIN="$RUNNER_TEMP/stage/Library/Application Support/obs-studio/plugins/podswitch.plugin"
+          mkdir -p "$PLUGIN/Contents/MacOS" "$PLUGIN/Contents/Resources"
+          find build -name "*.so" -exec cp {} "$PLUGIN/Contents/MacOS/" \;
+          cp -r data/. "$PLUGIN/Contents/Resources/"
           pkgbuild \
             --root "$RUNNER_TEMP/stage" \
             --identifier com.podswitch.podswitch \
