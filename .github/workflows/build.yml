@@ -65,15 +65,15 @@ jobs:
           pkgbuild \
             --root "$RUNNER_TEMP/stage" \
             --identifier com.podswitch.podswitch \
-            --version 1.0.0 \
+            --version 1.1.0 \
             --install-location / \
-            PodSwitch-1.0.0-macos-arm64.pkg
+            PodSwitch-1.1.0-macos-arm64.pkg
 
       - name: Upload .pkg artifact
         uses: actions/upload-artifact@v4
         with:
           name: PodSwitch-macos-arm64
-          path: PodSwitch-1.0.0-macos-arm64.pkg
+          path: PodSwitch-1.1.0-macos-arm64.pkg
 
   # ── Attach .pkg to GitHub Release ─────────────────────────────────────────
   release-artifacts:
