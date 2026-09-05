@@ -49,10 +49,54 @@ void SettingsDialog::populate_sources(
 }
 void SettingsDialog::build_ui() {
   auto *vbox = new QVBoxLayout(this);
-  tab_widget_ = new QTabWidget(this);
+  
+  auto *hbox = new QHBoxLayout();
+  nav_list_ = new QListWidget(this);
+  nav_list_->setFixedWidth(160);
+  stacked_pages_ = new QStackedWidget(this);
+  
+  hbox->addWidget(nav_list_);
+  hbox->addWidget(stacked_pages_);
 
+  // --- Scene Generator Tab (now first) ---
+  auto *gen_tab = new QWidget(stacked_pages_);
+  auto *gen_vbox = new QVBoxLayout(gen_tab);
+  
+  auto *guide_frame = new QFrame(gen_tab);
+  guide_frame->setFrameShape(QFrame::StyledPanel);
+  guide_frame->setStyleSheet("QFrame { background-color: rgba(60, 140, 255, 0.1); border-radius: 4px; border: 1px solid rgba(60, 140, 255, 0.3); margin-bottom: 8px; }");
+  auto *guide_layout = new QVBoxLayout(guide_frame);
+  auto *guide_label = new QLabel(
+      "<b>Podcast Setup Workflow:</b><br/>"
+      "<ol style='margin-top: 4px; margin-bottom: 0px; padding-left: 20px;'>"
+      "<li><b>Format:</b> Select your podcast format below and click <i>Generate</i>.</li>"
+      "<li><b>Video:</b> Go to the newly generated <i>Input Scenes</i> in OBS and add your cameras.</li>"
+      "<li><b>Audio:</b> Go to the <i>General</i> tab here to map your microphones to the new scenes.</li>"
+      "</ol>",
+      guide_frame);
+  guide_label->setWordWrap(true);
+  guide_label->setStyleSheet("QLabel { background: transparent; border: none; }");
+  guide_layout->addWidget(guide_label);
+  gen_vbox->addWidget(guide_frame);
+
+  auto *gen_form = new QFormLayout();
+
+  gen_format_combo_ = new QComboBox(gen_tab);
+  gen_format_combo_->addItem("2-Person Podcast", 0);
+  gen_format_combo_->addItem("3-Person Podcast", 1);
+  gen_format_combo_->addItem("4-Person Podcast", 2);
+  gen_form->addRow("Podcast Format:", gen_format_combo_);
+
+  gen_btn_ = new QPushButton("✨ Generate Podcast Scenes", gen_tab);
+  connect(gen_btn_, &QPushButton::clicked, this, &SettingsDialog::on_generate_scenes);
+
+  gen_vbox->addLayout(gen_form);
+  gen_vbox->addStretch();
+  gen_vbox->addWidget(gen_btn_);
+  stacked_pages_->addWidget(gen_tab);
+  
   // --- General Tab ---
-  auto *general_tab = new QWidget(tab_widget_);
+  auto *general_tab = new QWidget(stacked_pages_);
   auto *general_vbox = new QVBoxLayout(general_tab);
 
   auto *mg = new QGroupBox("Input Source Mapping for Switching Logic", general_tab);
@@ -83,7 +127,7 @@ void SettingsDialog::build_ui() {
           &SettingsDialog::on_add_mapping);
   connect(remove_btn_, &QPushButton::clicked, this,
           &SettingsDialog::on_remove_mapping);
-  auto *gg = new QGroupBox("Global Settings", this);
+  auto *gg = new QGroupBox("Global Settings", general_tab);
   auto *form = new QFormLayout(gg);
   auto *rr = new QHBoxLayout();
   relaxed_radio_ = new QRadioButton("Relaxed", gg);
@@ -119,46 +163,16 @@ void SettingsDialog::build_ui() {
   form->addRow("Reaction Cutaways:", rcr);
 
   general_vbox->addWidget(gg);
-  tab_widget_->addTab(general_tab, "General");
+  stacked_pages_->addWidget(general_tab);
 
-  // --- Scene Generator Tab ---
-  auto *gen_tab = new QWidget(tab_widget_);
-  auto *gen_vbox = new QVBoxLayout(gen_tab);
+  // Setup navigation
+  nav_list_->addItem("Podcast Format");
+  nav_list_->addItem("General");
   
-  auto *guide_frame = new QFrame(gen_tab);
-  guide_frame->setFrameShape(QFrame::StyledPanel);
-  guide_frame->setStyleSheet("QFrame { background-color: rgba(60, 140, 255, 0.1); border-radius: 4px; border: 1px solid rgba(60, 140, 255, 0.3); margin-bottom: 8px; }");
-  auto *guide_layout = new QVBoxLayout(guide_frame);
-  auto *guide_label = new QLabel(
-      "<b>Podcast Setup Workflow:</b><br/>"
-      "<ol style='margin-top: 4px; margin-bottom: 0px; padding-left: 20px;'>"
-      "<li><b>Format:</b> Select your podcast format below and click <i>Generate</i>.</li>"
-      "<li><b>Video:</b> Go to the newly generated <i>Input Scenes</i> in OBS and add your cameras.</li>"
-      "<li><b>Audio:</b> Go to the <i>General</i> tab here to map your microphones to the new scenes.</li>"
-      "</ol>",
-      guide_frame);
-  guide_label->setWordWrap(true);
-  guide_label->setStyleSheet("QLabel { background: transparent; border: none; }");
-  guide_layout->addWidget(guide_label);
-  gen_vbox->addWidget(guide_frame);
+  connect(nav_list_, &QListWidget::currentRowChanged, stacked_pages_, &QStackedWidget::setCurrentIndex);
+  nav_list_->setCurrentRow(0);
 
-  auto *gen_form = new QFormLayout();
-
-  gen_format_combo_ = new QComboBox(gen_tab);
-  gen_format_combo_->addItem("2-Person Podcast", 0);
-  gen_format_combo_->addItem("3-Person Podcast", 1);
-  gen_format_combo_->addItem("4-Person Podcast", 2);
-  gen_form->addRow("Podcast Format:", gen_format_combo_);
-
-  gen_btn_ = new QPushButton("✨ Generate Podcast Scenes", gen_tab);
-  connect(gen_btn_, &QPushButton::clicked, this, &SettingsDialog::on_generate_scenes);
-
-  gen_vbox->addLayout(gen_form);
-  gen_vbox->addStretch();
-  gen_vbox->addWidget(gen_btn_);
-  tab_widget_->addTab(gen_tab, "Podcast Format");
-
-  vbox->addWidget(tab_widget_);
+  vbox->addLayout(hbox);
   auto *bb = new QDialogButtonBox(
       QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel,
       this);

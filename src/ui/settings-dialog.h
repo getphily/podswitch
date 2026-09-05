@@ -6,7 +6,8 @@
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QPushButton>
-#include <QTabWidget>
+#include <QListWidget>
+#include <QStackedWidget>
 #include <QFormLayout>
 #include <vector>
 #include "../switch-engine.h"
@@ -29,7 +30,8 @@ private:
     Config *config_;
     QTableWidget *mappings_table_;
     QPushButton *add_btn_, *remove_btn_;
-    QTabWidget *tab_widget_;
+    QListWidget *nav_list_;
+    QStackedWidget *stacked_pages_;
     
     // Generator tab fields
     QComboBox *gen_format_combo_;
