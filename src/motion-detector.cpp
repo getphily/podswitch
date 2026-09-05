@@ -63,21 +63,19 @@ void MotionDetector::clear() {
 //   3. Compute mean absolute difference against previous frame
 //   4. Store result and invoke callback (cheap lambda, no locks on hot path)
 void MotionDetector::obs_video_cb(void *param,
-                                  obs_source_t * /*source*/,
+                                  obs_source_t *source,
                                   const struct obs_source_frame *frame) {
-    if (!frame || !param)
+    if (!frame || !param || !source)
         return;
 
     auto *self = static_cast<MotionDetector *>(param);
 
-    // Identify which source this is via pointer match
+    // Identify which source this is by matching the pointer OBS gave us
     std::string source_name;
     {
-        // brief lock just for name lookup
         std::lock_guard<std::mutex> lock(self->mutex_);
         for (auto &ws : self->watched_) {
-            if (ws.source &&
-                obs_get_source_by_name(ws.name.c_str()) == /*source*/ ws.source) {
+            if (ws.source == source) {
                 source_name = ws.name;
                 break;
             }
@@ -101,6 +99,17 @@ void MotionDetector::obs_video_cb(void *param,
         return;
 
     // Downsample luma to kThumbW x kThumbH using nearest-neighbour
+    // For packed YUV formats (YUY2, UYVY, YVYU), luma is every other byte
+    int luma_offset = 0;
+    int pixel_stride = 1;
+    if (frame->format == VIDEO_FORMAT_YUY2 || frame->format == VIDEO_FORMAT_YVYU) {
+        pixel_stride = 2; // Y U Y V → luma at bytes 0, 2, 4, ...
+        luma_offset = 0;
+    } else if (frame->format == VIDEO_FORMAT_UYVY) {
+        pixel_stride = 2; // U Y V Y → luma at bytes 1, 3, 5, ...
+        luma_offset = 1;
+    }
+
     std::vector<uint8_t> thumb(kThumbW * kThumbH);
     const uint8_t *src = frame->data[0];
     const uint32_t stride = frame->linesize[0];
@@ -108,7 +117,7 @@ void MotionDetector::obs_video_cb(void *param,
         uint32_t sy = (ty * fh) / kThumbH;
         for (uint32_t tx = 0; tx < kThumbW; ++tx) {
             uint32_t sx = (tx * fw) / kThumbW;
-            thumb[ty * kThumbW + tx] = src[sy * stride + sx];
+            thumb[ty * kThumbW + tx] = src[sy * stride + sx * pixel_stride + luma_offset];
         }
     }
 

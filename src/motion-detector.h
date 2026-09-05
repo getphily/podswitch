@@ -1,9 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <thread>
 #include <mutex>
-#include <atomic>
 #include <functional>
 #include <map>
 #include <obs.h>

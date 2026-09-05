@@ -55,6 +55,14 @@ void AutoCamDock::build_ui() {
   connect(settings_btn_, &QPushButton::clicked, this,
           &AutoCamDock::on_settings_clicked);
   vbox->addWidget(settings_btn_);
+  auto *audio_warning = new QLabel(
+      "⚠ Ensure all mics are in a global audio mix\n"
+      "or use the Scene Generator to auto-configure.",
+      root);
+  audio_warning->setStyleSheet(
+      "QLabel{color:#888;font-size:10px;padding:4px 0;}");
+  audio_warning->setWordWrap(true);
+  vbox->addWidget(audio_warning);
   vbox->addStretch();
 }
 void AutoCamDock::set_toggle_appearance(bool enabled) {
