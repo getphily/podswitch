@@ -54,7 +54,6 @@ public:
     void set_mappings(std::vector<CamMapping> mappings);
     void set_responsiveness(Responsiveness r);
     void set_motion_influence(MotionInfluence m);
-    void set_hold_time_ms(int ms);
     void set_switch_callback(SwitchCallback cb);
     void on_audio_level(const std::string &source_name, float dbfs);
     void update_motion_energy(const std::string &source_name, float energy);
@@ -71,7 +70,7 @@ private:
     std::unordered_map<std::string, size_t> video_to_mapping_;
     Responsiveness responsiveness_ = Responsiveness::Neutral;
     MotionInfluence motion_influence_ = MotionInfluence::Moderate;
-    int hold_time_ms_ = 800;
+    const int hold_time_ms_ = 800;
     SwitchCallback switch_cb_;
     std::atomic<bool> enabled_{false};
     std::string current_scene_;

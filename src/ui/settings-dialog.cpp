@@ -94,7 +94,7 @@ void SettingsDialog::build_ui() {
   rr->addWidget(neutral_radio_);
   rr->addWidget(fast_radio_);
   rr->addStretch();
-  form->addRow("Responsiveness:", rr);
+  form->addRow("Switching Speed:", rr);
 
   auto *mir = new QHBoxLayout();
   mi_off_radio_ = new QRadioButton("Off", gg);
@@ -107,24 +107,6 @@ void SettingsDialog::build_ui() {
   mir->addStretch();
   form->addRow("Motion Influence:", mir);
 
-  hold_time_spin_ = new QSpinBox(gg);
-  hold_time_spin_->setRange(100, 10000);
-  hold_time_spin_->setValue(800);
-  hold_time_spin_->setSuffix(" ms");
-  form->addRow("Hold Time:", hold_time_spin_);
-  auto *tr = new QHBoxLayout();
-  fade_check_ = new QCheckBox("Fade", gg);
-  fade_duration_spin_ = new QSpinBox(gg);
-  fade_duration_spin_->setRange(100, 3000);
-  fade_duration_spin_->setValue(300);
-  fade_duration_spin_->setSuffix(" ms");
-  fade_duration_spin_->setEnabled(false);
-  connect(fade_check_, &QCheckBox::toggled, fade_duration_spin_,
-          &QSpinBox::setEnabled);
-  tr->addWidget(fade_check_);
-  tr->addWidget(fade_duration_spin_);
-  tr->addStretch();
-  form->addRow("Transition:", tr);
   general_vbox->addWidget(gg);
   tab_widget_->addTab(general_tab, "General");
 
@@ -163,7 +145,7 @@ void SettingsDialog::build_ui() {
   gen_vbox->addLayout(gen_form);
   gen_vbox->addStretch();
   gen_vbox->addWidget(gen_btn_);
-  tab_widget_->addTab(gen_tab, "Scene Generator");
+  tab_widget_->addTab(gen_tab, "Podcast Format");
 
   vbox->addWidget(tab_widget_);
   auto *bb = new QDialogButtonBox(
@@ -270,11 +252,6 @@ void SettingsDialog::load_from_config() {
   default:
     mi_moderate_radio_->setChecked(true);
   }
-  hold_time_spin_->setValue(config_->get_hold_time_ms());
-
-  fade_check_->setChecked(config_->get_transition_fade());
-  fade_duration_spin_->setValue(config_->get_fade_duration_ms());
-  
   // Scene Generator Settings
   int format = config_->get_gen_format();
   int f_idx = gen_format_combo_->findData(format);
@@ -321,10 +298,6 @@ void SettingsDialog::save_to_config() {
   if (mi_high_radio_->isChecked())
     mi = MotionInfluence::High;
   config_->set_motion_influence(mi);
-
-  config_->set_hold_time_ms(hold_time_spin_->value());
-  config_->set_transition_fade(fade_check_->isChecked());
-  config_->set_fade_duration_ms(fade_duration_spin_->value());
 
   config_->set_gen_format(gen_format_combo_->currentData().toInt());
 

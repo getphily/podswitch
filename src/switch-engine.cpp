@@ -32,10 +32,6 @@ void SwitchEngine::set_motion_influence(MotionInfluence m) {
   std::lock_guard<std::mutex> lock(mutex_);
   motion_influence_ = m;
 }
-void SwitchEngine::set_hold_time_ms(int ms) {
-  std::lock_guard<std::mutex> l(mutex_);
-  hold_time_ms_ = ms;
-}
 void SwitchEngine::set_switch_callback(SwitchCallback cb) {
   std::lock_guard<std::mutex> l(mutex_);
   switch_cb_ = std::move(cb);

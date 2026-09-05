@@ -65,13 +65,6 @@ void Config::load() {
   }
   responsiveness_ = str_resp(obs_data_get_string(d, "responsiveness"));
   motion_influence_ = str_motion_inf(obs_data_get_string(d, "motion_influence"));
-  hold_time_ms_ = (int)obs_data_get_int(d, "hold_time_ms");
-  if (hold_time_ms_ <= 0)
-    hold_time_ms_ = 800;
-  transition_fade_ = obs_data_get_bool(d, "transition_fade");
-  fade_duration_ms_ = (int)obs_data_get_int(d, "fade_duration_ms");
-  if (fade_duration_ms_ <= 0)
-    fade_duration_ms_ = 300;
   gen_format_ = (int)obs_data_get_int(d, "gen_format");
   obs_data_array_t *arr = obs_data_get_array(d, "mappings");
   size_t n = arr ? obs_data_array_count(arr) : 0;
@@ -98,9 +91,6 @@ void Config::save() const {
   obs_data_t *d = obs_data_create();
   obs_data_set_string(d, "responsiveness", resp_str(responsiveness_));
   obs_data_set_string(d, "motion_influence", motion_inf_str(motion_influence_));
-  obs_data_set_int(d, "hold_time_ms", hold_time_ms_);
-  obs_data_set_bool(d, "transition_fade", transition_fade_);
-  obs_data_set_int(d, "fade_duration_ms", fade_duration_ms_);
   obs_data_set_int(d, "gen_format", gen_format_);
   obs_data_array_t *arr = obs_data_array_create();
   for (const auto &m : mappings_) {

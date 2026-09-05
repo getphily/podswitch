@@ -56,7 +56,7 @@ static std::vector<std::string> get_scene_names() {
 static void apply_config() {
   g_engine->set_mappings(g_config->get_mappings());
   g_engine->set_responsiveness(g_config->get_responsiveness());
-  g_engine->set_hold_time_ms(g_config->get_hold_time_ms());
+  g_engine->set_motion_influence(g_config->get_motion_influence());
   g_monitor->clear();
   if (g_motion) g_motion->clear();
   for (auto &m : g_config->get_mappings()) {
@@ -76,15 +76,6 @@ static void do_switch(const std::string &scene_name) {
       OBS_TASK_UI,
       [](void *param) {
         auto *name = static_cast<std::string *>(param);
-        if (g_config && g_config->get_transition_fade()) {
-          obs_source_t *ft = obs_get_source_by_name("Fade");
-          if (ft) {
-            obs_frontend_set_current_transition(ft);
-            obs_frontend_set_transition_duration(
-                g_config->get_fade_duration_ms());
-            obs_source_release(ft);
-          }
-        }
         obs_source_t *scene = obs_get_source_by_name(name->c_str());
         if (scene) {
           obs_frontend_set_current_scene(scene);
