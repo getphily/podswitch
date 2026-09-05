@@ -18,6 +18,7 @@ public:
     ~AutoCamDock() override=default;
     void refresh_mappings(const std::vector<std::pair<std::string,std::string>> &mappings);
     void set_responsiveness(Responsiveness r);
+    void set_enabled_state(bool enabled);
 signals:
     void open_settings_requested();
     void enabled_changed(bool enabled);

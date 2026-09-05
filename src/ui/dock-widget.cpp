@@ -76,6 +76,13 @@ void AutoCamDock::set_toggle_appearance(bool enabled) {
     toggle_btn_->setStyleSheet("QPushButton{background:#444;color:#aaa;font-weight:bold;font-size:16px;padding:12px;border-radius:4px;}");
   }
 }
+void AutoCamDock::set_enabled_state(bool enabled) {
+    if (engine_->is_enabled() != enabled) {
+        engine_->set_enabled(enabled);
+        set_toggle_appearance(enabled);
+        emit enabled_changed(enabled);
+    }
+}
 void AutoCamDock::on_toggle_clicked() {
   bool n = !engine_->is_enabled();
   engine_->set_enabled(n);

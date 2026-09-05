@@ -18,6 +18,7 @@ static AudioMonitor *g_monitor = nullptr;
 static MotionDetector *g_motion = nullptr;
 static AutoCamDock *g_dock = nullptr;
 static SettingsDialog *g_settings_dlg = nullptr;
+static std::atomic<bool> g_is_auto_switching{false};
 
 static std::vector<std::string> get_audio_sources() {
   std::vector<std::string> r;
@@ -79,7 +80,9 @@ static void do_switch(const std::string &scene_name) {
         auto *name = static_cast<std::string *>(param);
         obs_source_t *scene = obs_get_source_by_name(name->c_str());
         if (scene) {
+          g_is_auto_switching = true;
           obs_frontend_set_current_scene(scene);
+          g_is_auto_switching = false;
           obs_source_release(scene);
         }
         delete name;
@@ -97,6 +100,14 @@ static void on_frontend_event(enum obs_frontend_event event, void *) {
     if (scene) {
       if (g_engine) g_engine->sync_current_scene(obs_source_get_name(scene));
       obs_source_release(scene);
+    }
+    if (!g_is_auto_switching && g_engine && g_engine->is_enabled()) {
+        blog(LOG_INFO, "[podswitch] Manual scene switch detected! Stopping auto switcher.");
+        if (g_dock) {
+            g_dock->set_enabled_state(false);
+        } else {
+            g_engine->set_enabled(false);
+        }
     }
   }
 }
