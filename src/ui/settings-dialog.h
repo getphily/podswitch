@@ -34,6 +34,7 @@ private:
     // Generator tab fields
     QComboBox *gen_format_combo_;
     QComboBox *gen_host1_combo_, *gen_guest1_combo_, *gen_guest2_combo_;
+    QPushButton *gen_btn_;
     
     QRadioButton *relaxed_radio_, *neutral_radio_, *fast_radio_;
     QRadioButton *mi_off_radio_, *mi_moderate_radio_, *mi_high_radio_;

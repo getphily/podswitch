@@ -72,6 +72,14 @@ void SettingsDialog::populate_sources(
     load_from_config();
     config_loaded_ = true;
   }
+  
+  if (video_sources_.empty()) {
+    gen_btn_->setEnabled(false);
+    gen_btn_->setToolTip("Please add Video Capture Device sources to OBS first.");
+  } else {
+    gen_btn_->setEnabled(true);
+    gen_btn_->setToolTip("");
+  }
 }
 void SettingsDialog::build_ui() {
   auto *vbox = new QVBoxLayout(this);
@@ -160,6 +168,25 @@ void SettingsDialog::build_ui() {
   // --- Scene Generator Tab ---
   auto *gen_tab = new QWidget(tab_widget_);
   auto *gen_vbox = new QVBoxLayout(gen_tab);
+  
+  auto *guide_frame = new QFrame(gen_tab);
+  guide_frame->setFrameShape(QFrame::StyledPanel);
+  guide_frame->setStyleSheet("QFrame { background-color: rgba(60, 140, 255, 0.1); border-radius: 4px; border: 1px solid rgba(60, 140, 255, 0.3); margin-bottom: 8px; }");
+  auto *guide_layout = new QVBoxLayout(guide_frame);
+  auto *guide_label = new QLabel(
+      "<b>Podcast Setup Workflow:</b><br/>"
+      "<ol style='margin-top: 4px; margin-bottom: 0px; padding-left: 20px;'>"
+      "<li><b>Add to OBS:</b> Add your physical Camera and Mic sources directly into OBS first.</li>"
+      "<li><b>Format:</b> Select your podcast format below.</li>"
+      "<li><b>Video:</b> Assign your camera sources to each speaker and click <i>Generate</i>.</li>"
+      "<li><b>Audio:</b> Go to the <i>General</i> tab to map your microphones to the new scenes.</li>"
+      "</ol>",
+      guide_frame);
+  guide_label->setWordWrap(true);
+  guide_label->setStyleSheet("QLabel { background: transparent; border: none; }");
+  guide_layout->addWidget(guide_label);
+  gen_vbox->addWidget(guide_frame);
+
   auto *gen_form = new QFormLayout();
 
   gen_format_combo_ = new QComboBox(gen_tab);
@@ -185,12 +212,12 @@ void SettingsDialog::build_ui() {
   gen_guest2_combo_->setVisible(false);
   if (auto *label = gen_form->labelForField(gen_guest2_combo_)) label->setVisible(false);
 
-  auto *gen_btn = new QPushButton("✨ Generate Podcast Scenes", gen_tab);
-  connect(gen_btn, &QPushButton::clicked, this, &SettingsDialog::on_generate_scenes);
+  gen_btn_ = new QPushButton("✨ Generate Podcast Scenes", gen_tab);
+  connect(gen_btn_, &QPushButton::clicked, this, &SettingsDialog::on_generate_scenes);
 
   gen_vbox->addLayout(gen_form);
   gen_vbox->addStretch();
-  gen_vbox->addWidget(gen_btn);
+  gen_vbox->addWidget(gen_btn_);
   tab_widget_->addTab(gen_tab, "Scene Generator");
 
   vbox->addWidget(tab_widget_);
