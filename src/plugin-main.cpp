@@ -154,11 +154,9 @@ bool obs_module_load() {
 }
 void obs_module_unload() {
   obs_frontend_remove_event_callback(on_frontend_event, nullptr);
-  g_engine->set_enabled(false);
-  g_monitor->clear();
+  if (g_engine) g_engine->set_enabled(false);
+  if (g_monitor) g_monitor->clear();
   if (g_motion) g_motion->clear();
-  delete g_dock;
-  delete g_settings_dlg;
   delete g_motion;
   delete g_monitor;
   delete g_engine;
