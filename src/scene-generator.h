@@ -15,12 +15,19 @@ struct SceneGenSettings {
     std::vector<std::string> audio_sources;
 };
 
+// Forward declare OBS types to avoid pulling obs.h into every file that
+// includes this header.
+struct obs_source;
+typedef struct obs_source obs_source_t;
+struct obs_scene;
+typedef struct obs_scene obs_scene_t;
+
 class SceneGenerator {
 public:
     static bool generate(const SceneGenSettings &settings);
 private:
     static void delete_existing_generated_scenes();
-    static void generate_1_on_1(const SceneGenSettings &settings, void *audio_scene_source);
-    static void generate_power_dynamic(const SceneGenSettings &settings, void *audio_scene_source);
-    static void *create_audio_mix_scene(const std::vector<std::string> &audio_sources);
+    static obs_source_t *create_audio_mix_scene(const std::vector<std::string> &audio_sources);
+    static void generate_1_on_1(const SceneGenSettings &settings, obs_source_t *audio_mix);
+    static void generate_power_dynamic(const SceneGenSettings &settings, obs_source_t *audio_mix);
 };
