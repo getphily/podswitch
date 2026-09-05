@@ -3,8 +3,8 @@
 #include <util/base.h>
 
 SwitchEngine::SwitchEngine() {
-  last_switch_time_ =
-      std::chrono::steady_clock::now() - std::chrono::milliseconds(99999);
+  last_switch_time_ = std::chrono::steady_clock::now() - std::chrono::milliseconds(99999);
+  last_cutaway_time_ = std::chrono::steady_clock::now() - std::chrono::milliseconds(99999);
 }
 void SwitchEngine::set_mappings(std::vector<CamMapping> mappings) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -31,6 +31,10 @@ void SwitchEngine::set_responsiveness(Responsiveness r) {
 void SwitchEngine::set_motion_influence(MotionInfluence m) {
   std::lock_guard<std::mutex> lock(mutex_);
   motion_influence_ = m;
+}
+void SwitchEngine::set_reaction_cutaways(ReactionCutaways rc) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  reaction_cutaways_ = rc;
 }
 void SwitchEngine::set_switch_callback(SwitchCallback cb) {
   std::lock_guard<std::mutex> l(mutex_);
@@ -92,10 +96,47 @@ std::string SwitchEngine::try_switch() {
     target = "";
   }
 
+  if (!in_cutaway_ && !target.empty() && target != "— None —") {
+      primary_speaker_ = target;
+  }
+
+  auto now = std::chrono::steady_clock::now();
+  long long time_since_cutaway = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_cutaway_time_).count();
+
+  if (in_cutaway_) {
+      if (time_since_cutaway > 2000) {
+          in_cutaway_ = false;
+          target = primary_speaker_;
+      } else {
+          target = current_scene_;
+      }
+  } else if (reaction_cutaways_ != ReactionCutaways::Never) {
+      long long cooldown = (reaction_cutaways_ == ReactionCutaways::Often) ? 5000 : 15000;
+      if (time_since_cutaway > cooldown && active_speakers == 1) {
+          const CamMapping *reactor = nullptr;
+          float best_reaction = 0.0f;
+          for (const auto &m : mappings_) {
+              if (m.scene_name != primary_speaker_) {
+                  float audio_norm = std::clamp(m.ema.value + 60.0f, 0.0f, 60.0f) * (100.0f / 60.0f);
+                  float reaction_score = m.motion_energy + (audio_norm * 0.5f);
+                  if (reaction_score > 60.0f && reaction_score > best_reaction) {
+                      best_reaction = reaction_score;
+                      reactor = &m;
+                  }
+              }
+          }
+          if (reactor) {
+              in_cutaway_ = true;
+              last_cutaway_time_ = now;
+              target = reactor->scene_name;
+              blog(LOG_INFO, "[switchy] REACTION CUTAWAY to %s (score %.1f)", target.c_str(), best_reaction);
+          }
+      }
+  }
+
   // If the engine gets confused (crosstalk or silence),
   // we do not want it to instantly jump as soon as someone speaks. We enforce a timeout.
   if (target.empty() || target == "— None —") {
-      auto now = std::chrono::steady_clock::now();
       auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                          now - last_switch_time_)
                          .count();
@@ -108,7 +149,6 @@ std::string SwitchEngine::try_switch() {
   if (target == current_scene_)
     return "";
     
-  auto now = std::chrono::steady_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                      now - last_switch_time_)
                      .count();

@@ -107,6 +107,17 @@ void SettingsDialog::build_ui() {
   mir->addStretch();
   form->addRow("Motion Influence:", mir);
 
+  auto *rcr = new QHBoxLayout();
+  rc_never_radio_ = new QRadioButton("Never", gg);
+  rc_occasional_radio_ = new QRadioButton("Occasional", gg);
+  rc_often_radio_ = new QRadioButton("Often", gg);
+  rc_never_radio_->setChecked(true);
+  rcr->addWidget(rc_never_radio_);
+  rcr->addWidget(rc_occasional_radio_);
+  rcr->addWidget(rc_often_radio_);
+  rcr->addStretch();
+  form->addRow("Reaction Cutaways:", rcr);
+
   general_vbox->addWidget(gg);
   tab_widget_->addTab(general_tab, "General");
 
@@ -252,6 +263,17 @@ void SettingsDialog::load_from_config() {
   default:
     mi_moderate_radio_->setChecked(true);
   }
+
+  switch (config_->get_reaction_cutaways()) {
+  case ReactionCutaways::Occasional:
+    rc_occasional_radio_->setChecked(true);
+    break;
+  case ReactionCutaways::Often:
+    rc_often_radio_->setChecked(true);
+    break;
+  default:
+    rc_never_radio_->setChecked(true);
+  }
   // Scene Generator Settings
   int format = config_->get_gen_format();
   int f_idx = gen_format_combo_->findData(format);
@@ -298,6 +320,13 @@ void SettingsDialog::save_to_config() {
   if (mi_high_radio_->isChecked())
     mi = MotionInfluence::High;
   config_->set_motion_influence(mi);
+
+  ReactionCutaways rc = ReactionCutaways::Never;
+  if (rc_occasional_radio_->isChecked())
+    rc = ReactionCutaways::Occasional;
+  if (rc_often_radio_->isChecked())
+    rc = ReactionCutaways::Often;
+  config_->set_reaction_cutaways(rc);
 
   config_->set_gen_format(gen_format_combo_->currentData().toInt());
 

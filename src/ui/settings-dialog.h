@@ -37,6 +37,7 @@ private:
     
     QRadioButton *relaxed_radio_, *neutral_radio_, *fast_radio_;
     QRadioButton *mi_off_radio_, *mi_moderate_radio_, *mi_high_radio_;
+    QRadioButton *rc_never_radio_, *rc_occasional_radio_, *rc_often_radio_;
     std::vector<std::string> audio_sources_, video_sources_, scene_names_;
     void build_ui(); void load_from_config(); void save_to_config();
     void add_mapping_row(const CamMapping &m={});

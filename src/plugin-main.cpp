@@ -57,6 +57,7 @@ static void apply_config() {
   g_engine->set_mappings(g_config->get_mappings());
   g_engine->set_responsiveness(g_config->get_responsiveness());
   g_engine->set_motion_influence(g_config->get_motion_influence());
+  g_engine->set_reaction_cutaways(g_config->get_reaction_cutaways());
   g_monitor->clear();
   if (g_motion) g_motion->clear();
   for (auto &m : g_config->get_mappings()) {

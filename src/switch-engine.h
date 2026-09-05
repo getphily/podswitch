@@ -23,6 +23,8 @@ inline float responsiveness_alpha(Responsiveness r) {
     return 0.15f;
 }
 
+enum class ReactionCutaways { Never = 0, Occasional = 1, Often = 2 };
+
 enum class MotionInfluence { Off = 0, Moderate = 1, High = 2 };
 inline float motion_influence_weight(MotionInfluence m) {
     if (m == MotionInfluence::Moderate) return 0.5f;
@@ -54,6 +56,7 @@ public:
     void set_mappings(std::vector<CamMapping> mappings);
     void set_responsiveness(Responsiveness r);
     void set_motion_influence(MotionInfluence m);
+    void set_reaction_cutaways(ReactionCutaways rc);
     void set_switch_callback(SwitchCallback cb);
     void on_audio_level(const std::string &source_name, float dbfs);
     void update_motion_energy(const std::string &source_name, float energy);
@@ -70,9 +73,13 @@ private:
     std::unordered_map<std::string, size_t> video_to_mapping_;
     Responsiveness responsiveness_ = Responsiveness::Neutral;
     MotionInfluence motion_influence_ = MotionInfluence::Moderate;
+    ReactionCutaways reaction_cutaways_ = ReactionCutaways::Never;
     const int hold_time_ms_ = 800;
     SwitchCallback switch_cb_;
     std::atomic<bool> enabled_{false};
     std::string current_scene_;
+    std::string primary_speaker_;
+    bool in_cutaway_ = false;
     std::chrono::steady_clock::time_point last_switch_time_;
+    std::chrono::steady_clock::time_point last_cutaway_time_;
 };

@@ -31,6 +31,20 @@ static MotionInfluence str_motion_inf(const char *s) {
     return MotionInfluence::High;
   return MotionInfluence::Moderate;
 }
+static const char *reaction_cutaways_str(ReactionCutaways r) {
+  if (r == ReactionCutaways::Occasional)
+    return "occasional";
+  if (r == ReactionCutaways::Often)
+    return "often";
+  return "never";
+}
+static ReactionCutaways str_reaction_cutaways(const char *s) {
+  if (s && std::string(s) == "occasional")
+    return ReactionCutaways::Occasional;
+  if (s && std::string(s) == "often")
+    return ReactionCutaways::Often;
+  return ReactionCutaways::Never;
+}
 static const char *prio_str(Priority p) {
   if (p == Priority::Low)
     return "low";
@@ -65,6 +79,7 @@ void Config::load() {
   }
   responsiveness_ = str_resp(obs_data_get_string(d, "responsiveness"));
   motion_influence_ = str_motion_inf(obs_data_get_string(d, "motion_influence"));
+  reaction_cutaways_ = str_reaction_cutaways(obs_data_get_string(d, "reaction_cutaways"));
   gen_format_ = (int)obs_data_get_int(d, "gen_format");
   obs_data_array_t *arr = obs_data_get_array(d, "mappings");
   size_t n = arr ? obs_data_array_count(arr) : 0;
@@ -91,6 +106,7 @@ void Config::save() const {
   obs_data_t *d = obs_data_create();
   obs_data_set_string(d, "responsiveness", resp_str(responsiveness_));
   obs_data_set_string(d, "motion_influence", motion_inf_str(motion_influence_));
+  obs_data_set_string(d, "reaction_cutaways", reaction_cutaways_str(reaction_cutaways_));
   obs_data_set_int(d, "gen_format", gen_format_);
   obs_data_array_t *arr = obs_data_array_create();
   for (const auto &m : mappings_) {
