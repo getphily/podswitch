@@ -4,6 +4,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 using AudioLevelCallback = std::function<void(const std::string &source_name, float dbfs)>;
 class AudioMonitor;
@@ -31,5 +32,6 @@ private:
                                  const audio_data *audio, bool muted);
     std::mutex mutex_;
     std::unordered_map<std::string, SourceEntry> entries_;
+    std::unordered_set<std::string> active_sources_;
     AudioLevelCallback callback_;
 };

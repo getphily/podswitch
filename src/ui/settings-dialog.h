@@ -32,4 +32,5 @@ private:
     std::vector<std::string> audio_sources_, scene_names_;
     void build_ui(); void load_from_config(); void save_to_config();
     void add_mapping_row(const CamMapping &m={});
+    bool config_loaded_ = false;
 };

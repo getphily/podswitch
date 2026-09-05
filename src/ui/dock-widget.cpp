@@ -43,8 +43,9 @@ void AutoCamDock::build_ui() {
   responsiveness_combo_->setCurrentIndex(1);
   connect(responsiveness_combo_,
           QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int idx) {
-            engine_->set_responsiveness(
-                (Responsiveness)responsiveness_combo_->itemData(idx).toInt());
+            int r = responsiveness_combo_->itemData(idx).toInt();
+            engine_->set_responsiveness((Responsiveness)r);
+            emit responsiveness_changed(r);
           });
   resp_row->addWidget(responsiveness_combo_);
   vbox->addLayout(resp_row);
@@ -73,12 +74,22 @@ void AutoCamDock::on_toggle_clicked() {
   set_toggle_appearance(n);
   emit enabled_changed(n);
 }
+void AutoCamDock::set_responsiveness(Responsiveness r) {
+  int idx = responsiveness_combo_->findData((int)r);
+  if (idx >= 0) {
+    responsiveness_combo_->blockSignals(true);
+    responsiveness_combo_->setCurrentIndex(idx);
+    responsiveness_combo_->blockSignals(false);
+  }
+}
 void AutoCamDock::on_settings_clicked() { emit open_settings_requested(); }
 void AutoCamDock::refresh_mappings(
     const std::vector<std::pair<std::string, std::string>> &mappings) {
-  for (auto &r : vu_rows_) {
-    delete r.label;
-    delete r.bar;
+  QLayoutItem *item;
+  while ((item = vu_layout_->takeAt(0)) != nullptr) {
+    if (item->widget())
+      delete item->widget();
+    delete item;
   }
   vu_rows_.clear();
   for (const auto &[src, scene] : mappings) {
@@ -107,9 +118,14 @@ void AutoCamDock::refresh_mappings(
 }
 void AutoCamDock::update_vu_meters() {
   auto levels = engine_->get_levels();
-  for (size_t i = 0; i < levels.size() && i < vu_rows_.size(); ++i) {
-    int pct = (int)((std::clamp(levels[i].second, -60.0f, 0.0f) + 60.0f) *
-                    (100.0f / 60.0f));
-    vu_rows_[i].bar->setValue(pct);
+  for (const auto &level : levels) {
+    for (size_t i = 0; i < vu_rows_.size(); ++i) {
+      if (vu_rows_[i].label->text().startsWith(QString::fromStdString(level.first) + " →")) {
+        int pct = (int)((std::clamp(level.second, -60.0f, 0.0f) + 60.0f) *
+                        (100.0f / 60.0f));
+        vu_rows_[i].bar->setValue(pct);
+        break;
+      }
+    }
   }
 }

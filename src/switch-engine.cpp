@@ -38,18 +38,28 @@ void SwitchEngine::set_enabled(bool enabled) {
   blog(LOG_INFO, "[switchy] %s", enabled ? "ENABLED" : "DISABLED");
 }
 void SwitchEngine::on_audio_level(const std::string &source_name, float dbfs) {
-  std::lock_guard<std::mutex> lock(mutex_);
   if (!enabled_)
     return;
-  for (auto &m : mappings_) {
-    if (m.audio_source == source_name) {
-      m.ema.update(dbfs);
-      break;
+  std::string target_to_switch;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (auto &m : mappings_) {
+      if (m.audio_source == source_name) {
+        m.ema.update(dbfs);
+        break;
+      }
     }
+    target_to_switch = try_switch();
   }
-  try_switch();
+  if (!target_to_switch.empty() && switch_cb_) {
+    switch_cb_(target_to_switch);
+  }
 }
-void SwitchEngine::try_switch() {
+void SwitchEngine::sync_current_scene(const std::string &scene) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  current_scene_ = scene;
+}
+std::string SwitchEngine::try_switch() {
   float best = -FLT_MAX;
   const CamMapping *winner = nullptr;
   for (const auto &m : mappings_) {
@@ -65,18 +75,17 @@ void SwitchEngine::try_switch() {
                            ? winner->scene_name
                            : (!fallback_scene_.empty() ? fallback_scene_ : "");
   if (target.empty() || target == current_scene_)
-    return;
+    return "";
   auto now = std::chrono::steady_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                      now - last_switch_time_)
                      .count();
   if (elapsed < hold_time_ms_)
-    return;
+    return "";
   current_scene_ = target;
   last_switch_time_ = now;
   blog(LOG_DEBUG, "[switchy] -> '%s'", target.c_str());
-  if (switch_cb_)
-    switch_cb_(target);
+  return target;
 }
 std::vector<std::pair<std::string, float>> SwitchEngine::get_levels() const {
   std::lock_guard<std::mutex> lock(mutex_);

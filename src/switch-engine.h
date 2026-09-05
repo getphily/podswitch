@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <mutex>
+#include <atomic>
 #include <functional>
 #include <cfloat>
 #include "utils.h"
@@ -43,15 +44,16 @@ public:
     void set_enabled(bool enabled);
     bool is_enabled() const { return enabled_; }
     std::vector<std::pair<std::string, float>> get_levels() const;
+    void sync_current_scene(const std::string &scene);
 private:
-    void try_switch();
+    std::string try_switch();
     mutable std::mutex mutex_;
     std::vector<CamMapping> mappings_;
     Responsiveness responsiveness_ = Responsiveness::Neutral;
     int hold_time_ms_ = 800;
     std::string fallback_scene_;
     SwitchCallback switch_cb_;
-    bool enabled_ = false;
+    std::atomic<bool> enabled_{false};
     std::string current_scene_;
     std::chrono::steady_clock::time_point last_switch_time_;
 };

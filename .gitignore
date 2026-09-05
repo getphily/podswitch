@@ -27,3 +27,4 @@ qrc_*.cpp
 # Compiled object files
 *.o
 *.obj
+.deps/

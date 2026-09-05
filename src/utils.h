@@ -8,6 +8,7 @@ inline float linear_to_dbfs(float linear) {
 }
 
 inline float compute_rms(const float *data, uint32_t frames, uint32_t channels) {
+    if (!data) return 0.0f;
     double sum = 0.0;
     uint32_t total = frames * channels;
     if (total == 0) return 0.0f;
@@ -22,6 +23,7 @@ struct EMA {
     float value = -96.0f;
     float alpha = 0.15f;
     void update(float newVal) {
+        if (std::isnan(newVal) || std::isinf(newVal)) return;
         value = alpha * newVal + (1.0f - alpha) * value;
     }
 };

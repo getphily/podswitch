@@ -15,9 +15,11 @@ public:
     explicit AutoCamDock(SwitchEngine *engine, QWidget *parent=nullptr);
     ~AutoCamDock() override=default;
     void refresh_mappings(const std::vector<std::pair<std::string,std::string>> &mappings);
+    void set_responsiveness(Responsiveness r);
 signals:
     void open_settings_requested();
     void enabled_changed(bool enabled);
+    void responsiveness_changed(int r);
 private slots:
     void on_toggle_clicked(); void on_settings_clicked(); void update_vu_meters();
 private:

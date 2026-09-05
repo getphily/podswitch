@@ -12,7 +12,6 @@ SettingsDialog::SettingsDialog(Config *config, QWidget *parent)
   setWindowTitle("PodSwitch — Settings");
   setMinimumWidth(580);
   build_ui();
-  load_from_config();
 }
 void SettingsDialog::populate_sources(
     const std::vector<std::string> &audio_sources,
@@ -41,6 +40,10 @@ void SettingsDialog::populate_sources(
     fallback_combo_->addItem(QString::fromStdString(s),
                              QString::fromStdString(s));
   fallback_combo_->setCurrentText(cf);
+  if (!config_loaded_) {
+    load_from_config();
+    config_loaded_ = true;
+  }
 }
 void SettingsDialog::build_ui() {
   auto *vbox = new QVBoxLayout(this);
@@ -139,9 +142,11 @@ void SettingsDialog::add_mapping_row(const CamMapping &m) {
   mappings_table_->setCellWidget(row, 3, ts);
   auto *db = new QPushButton("✕");
   db->setFixedWidth(28);
-  connect(db, &QPushButton::clicked, [this, db]() {
+  connect(db, &QPushButton::clicked, this, [this]() {
+    auto *btn = qobject_cast<QPushButton *>(sender());
+    if (!btn) return;
     for (int r = 0; r < mappings_table_->rowCount(); ++r) {
-      if (mappings_table_->cellWidget(r, 4) == db) {
+      if (mappings_table_->cellWidget(r, 4) == btn) {
         mappings_table_->removeRow(r);
         break;
       }
@@ -171,9 +176,10 @@ void SettingsDialog::load_from_config() {
   }
   hold_time_spin_->setValue(config_->get_hold_time_ms());
   QString fb = QString::fromStdString(config_->get_fallback_scene());
-  int idx = fallback_combo_->findText(fb);
+  int idx = fallback_combo_->findData(fb);
   if (idx >= 0)
     fallback_combo_->setCurrentIndex(idx);
+
   fade_check_->setChecked(config_->get_transition_fade());
   fade_duration_spin_->setValue(config_->get_fade_duration_ms());
 }

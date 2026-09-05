@@ -1,4 +1,4 @@
-# Contributing to Switchy
+# Contributing to PodSwitch
 
 Thank you for your interest! Contributions are welcome.
 

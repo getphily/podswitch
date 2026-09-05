@@ -22,9 +22,14 @@ void AudioMonitor::add_source(const std::string &source_name) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (entries_.count(source_name))
       return;
+    entries_[source_name] = SourceEntry{};
   }
   obs_source_t *src = obs_get_source_by_name(source_name.c_str());
   if (!src) {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      entries_.erase(source_name);
+    }
     blog(LOG_WARNING, "[switchy] Source not found: '%s'", source_name.c_str());
     return;
   }
@@ -73,7 +78,14 @@ void AudioMonitor::audio_capture_cb(void *param, obs_source_t *,
   auto *ctx = static_cast<SourceCallbackCtx *>(param);
   if (!audio || !audio->frames || muted)
     return;
-  const float *buf = reinterpret_cast<const float *>(audio->data[0]);
-  float rms = compute_rms(buf, audio->frames, 1);
-  ctx->monitor->fire_callback(ctx->name, linear_to_dbfs(rms));
+  float max_rms = 0.0f;
+  size_t p = 0;
+  while (p < MAX_AV_PLANES && audio->data[p]) {
+    const float *buf = reinterpret_cast<const float *>(audio->data[p]);
+    float rms = compute_rms(buf, audio->frames, 1);
+    if (rms > max_rms)
+      max_rms = rms;
+    p++;
+  }
+  ctx->monitor->fire_callback(ctx->name, linear_to_dbfs(max_rms));
 }

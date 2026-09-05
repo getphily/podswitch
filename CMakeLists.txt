@@ -15,10 +15,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # OBS Studio - Forced Header-Only Build (Option B)
 # ---------------------------------------------------------------------------
 if(NOT OBS_SOURCE_DIR)
-  set(OBS_SOURCE_DIR "/Users/philybarrolaza/Library/Mobile Documents/com~apple~CloudDocs/Projects/Podswitch/.deps/obs-studio-31.1.1" CACHE PATH "obs-studio source tree" FORCE)
+  set(OBS_SOURCE_DIR "" CACHE PATH "obs-studio source tree")
 endif()
-
-set(OBS_CONFIG_DIR "/Users/philybarrolaza/Library/Mobile Documents/com~apple~CloudDocs/Projects/Podswitch/.deps/obs-studio-31.1.1/build_universal/config")
+if(NOT OBS_CONFIG_DIR)
+  set(OBS_CONFIG_DIR "${OBS_SOURCE_DIR}/build_universal/config" CACHE PATH "obs-studio build/config dir")
+endif()
 
 message(STATUS "[PodSwitch] Using dependencies from: ${OBS_SOURCE_DIR}")
 
@@ -31,7 +32,7 @@ target_include_directories(OBS::libobs INTERFACE
 
 add_library(OBS::obs-frontend-api INTERFACE IMPORTED)
 target_include_directories(OBS::obs-frontend-api INTERFACE
-  "${OBS_SOURCE_DIR}/frontend/api"
+  "${OBS_SOURCE_DIR}/UI/obs-frontend-api"
   "${OBS_SOURCE_DIR}/libobs"
   "${OBS_CONFIG_DIR}"
   "${CMAKE_SOURCE_DIR}/src"
@@ -63,14 +64,7 @@ if(QT_NS)
   set(CMAKE_AUTORCC ON)
 endif()
 
-# Robust macOS Sequoia Patch: Strip missing AGL framework from link lines
-if(APPLE)
-  macro(target_link_libraries _target)
-    set(_all_args ${ARGN})
-    list(REMOVE_ITEM _all_args "-framework AGL")
-    _target_link_libraries(${_target} ${_all_args})
-  endmacro()
-endif()
+# Removed invalid macro
 
 # ---------------------------------------------------------------------------
 # Sources
@@ -113,6 +107,10 @@ elseif(WIN32)
 else()
   set(_PLUG "$ENV{HOME}/.config/obs-studio/plugins/podswitch")
 endif()
-install(TARGETS podswitch LIBRARY DESTINATION "${_PLUG}/Contents/MacOS")
-install(DIRECTORY data/ DESTINATION "${_PLUG}/Contents/Resources")
-
+if(APPLE)
+  install(TARGETS podswitch LIBRARY DESTINATION "${_PLUG}/Contents/MacOS")
+  install(DIRECTORY data/ DESTINATION "${_PLUG}/Contents/Resources")
+else()
+  install(TARGETS podswitch LIBRARY DESTINATION "${_PLUG}/bin/64bit")
+  install(DIRECTORY data/ DESTINATION "${_PLUG}/data")
+endif()

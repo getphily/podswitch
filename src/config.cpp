@@ -36,9 +36,10 @@ Config::Config() { load(); }
 Config::~Config() {}
 
 std::string Config::get_config_path() const {
-  char *dir = obs_module_config_path("");
-  std::string p = std::string(dir) + "settings.json";
-  bfree(dir);
+  char *path = obs_module_config_path("settings.json");
+  std::string p = path ? path : "podswitch-settings.json";
+  if (path)
+    bfree(path);
   return p;
 }
 void Config::load() {
@@ -58,7 +59,7 @@ void Config::load() {
   if (fade_duration_ms_ <= 0)
     fade_duration_ms_ = 300;
   obs_data_array_t *arr = obs_data_get_array(d, "mappings");
-  size_t n = obs_data_array_count(arr);
+  size_t n = arr ? obs_data_array_count(arr) : 0;
   mappings_.clear();
   for (size_t i = 0; i < n; ++i) {
     obs_data_t *item = obs_data_array_item(arr, i);
@@ -67,14 +68,15 @@ void Config::load() {
     m.scene_name = obs_data_get_string(item, "scene_name");
     m.priority = str_prio(obs_data_get_string(item, "priority"));
     m.threshold_dbfs = (float)obs_data_get_double(item, "threshold_dbfs");
-    if (m.threshold_dbfs == 0.0f)
+    if (!obs_data_has_user_value(item, "threshold_dbfs"))
       m.threshold_dbfs = -40.0f;
     obs_data_release(item);
     mappings_.push_back(std::move(m));
   }
-  obs_data_array_release(arr);
+  if (arr)
+    obs_data_array_release(arr);
   obs_data_release(d);
-  blog(LOG_INFO, "[switchy] Loaded %zu mappings", mappings_.size());
+  blog(LOG_INFO, "[podswitch] Loaded %zu mappings", mappings_.size());
 }
 void Config::save() const {
   obs_data_t *d = obs_data_create();
@@ -97,5 +99,5 @@ void Config::save() const {
   obs_data_array_release(arr);
   obs_data_save_json(d, get_config_path().c_str());
   obs_data_release(d);
-  blog(LOG_INFO, "[switchy] Config saved");
+  blog(LOG_INFO, "[podswitch] Config saved");
 }

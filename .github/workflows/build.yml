@@ -1,4 +1,4 @@
-name: Build Switchy — macOS
+name: Build PodSwitch — macOS
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
           cd /tmp/obs-studio
           git sparse-checkout set libobs UI/obs-frontend-api
 
-      - name: Configure Switchy
+      - name: Configure PodSwitch
         run: |
           cmake -B build -S . -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -57,22 +57,22 @@ jobs:
 
       - name: Create .pkg installer
         run: |
-          PLUGIN="$RUNNER_TEMP/stage/Library/Application Support/obs-studio/plugins/obs-auto-cam-switcher"
+          PLUGIN="$RUNNER_TEMP/stage/Library/Application Support/obs-studio/plugins/podswitch"
           mkdir -p "$PLUGIN/bin" "$PLUGIN/data"
-          find build -name "*.dylib" -exec cp {} "$PLUGIN/bin/" \;
+          find build -name "*.so" -exec cp {} "$PLUGIN/bin/" \;
           cp -r data/. "$PLUGIN/data/"
           pkgbuild \
             --root "$RUNNER_TEMP/stage" \
-            --identifier com.switchy.obs-auto-cam-switcher \
+            --identifier com.podswitch.podswitch \
             --version 1.0.0 \
             --install-location / \
-            Switchy-1.0.0-macos-arm64.pkg
+            PodSwitch-1.0.0-macos-arm64.pkg
 
       - name: Upload .pkg artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Switchy-macos-arm64
-          path: Switchy-1.0.0-macos-arm64.pkg
+          name: PodSwitch-macos-arm64
+          path: PodSwitch-1.0.0-macos-arm64.pkg
 
   # ── Attach .pkg to GitHub Release ─────────────────────────────────────────
   release-artifacts:
@@ -83,7 +83,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Switchy-macos-arm64
+          name: PodSwitch-macos-arm64
           path: installers
       - name: List installers
         run: find installers -name "*.pkg" | sort
