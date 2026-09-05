@@ -36,10 +36,6 @@ void SwitchEngine::set_hold_time_ms(int ms) {
   std::lock_guard<std::mutex> l(mutex_);
   hold_time_ms_ = ms;
 }
-void SwitchEngine::set_fallback_scene(const std::string &s) {
-  std::lock_guard<std::mutex> l(mutex_);
-  fallback_scene_ = s;
-}
 void SwitchEngine::set_switch_callback(SwitchCallback cb) {
   std::lock_guard<std::mutex> l(mutex_);
   switch_cb_ = std::move(cb);
@@ -93,14 +89,14 @@ std::string SwitchEngine::try_switch() {
   }
   std::string target;
   if (active_speakers >= 2) {
-    target = fallback_scene_;
+    target = "";
   } else if (winner) {
     target = winner->scene_name;
   } else {
-    target = fallback_scene_;
+    target = "";
   }
 
-  // If the engine gets confused (crosstalk or silence) but there is no fallback scene assigned,
+  // If the engine gets confused (crosstalk or silence),
   // we do not want it to instantly jump as soon as someone speaks. We enforce a timeout.
   if (target.empty() || target == "— None —") {
       auto now = std::chrono::steady_clock::now();

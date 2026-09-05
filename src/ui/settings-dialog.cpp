@@ -41,15 +41,6 @@ void SettingsDialog::populate_sources(
     vc->setCurrentText(cv);
     ss->setCurrentText(csn);
   }
-  QString cf = fallback_combo_->currentText();
-  fallback_combo_->clear();
-  fallback_combo_->addItem("— None —", "");
-  for (auto &s : scene_names_) {
-    fallback_combo_->addItem(QString::fromStdString(s),
-                             QString::fromStdString(s));
-  }
-  fallback_combo_->setCurrentText(cf);
-
 
   if (!config_loaded_) {
     load_from_config();
@@ -121,9 +112,6 @@ void SettingsDialog::build_ui() {
   hold_time_spin_->setValue(800);
   hold_time_spin_->setSuffix(" ms");
   form->addRow("Hold Time:", hold_time_spin_);
-  fallback_combo_ = new QComboBox(gg);
-  fallback_combo_->addItem("— None —", "");
-  form->addRow("Fallback Scene:", fallback_combo_);
   auto *tr = new QHBoxLayout();
   fade_check_ = new QCheckBox("Fade", gg);
   fade_duration_spin_ = new QSpinBox(gg);
@@ -164,8 +152,9 @@ void SettingsDialog::build_ui() {
   auto *gen_form = new QFormLayout();
 
   gen_format_combo_ = new QComboBox(gen_tab);
-  gen_format_combo_->addItem("1-on-1 Interview", 0);
-  gen_format_combo_->addItem("Power Dynamic (3-person)", 1);
+  gen_format_combo_->addItem("2-Person Podcast", 0);
+  gen_format_combo_->addItem("3-Person Podcast", 1);
+  gen_format_combo_->addItem("4-Person Podcast", 2);
   gen_form->addRow("Podcast Format:", gen_format_combo_);
 
   gen_btn_ = new QPushButton("✨ Generate Podcast Scenes", gen_tab);
@@ -282,10 +271,6 @@ void SettingsDialog::load_from_config() {
     mi_moderate_radio_->setChecked(true);
   }
   hold_time_spin_->setValue(config_->get_hold_time_ms());
-  QString fb = QString::fromStdString(config_->get_fallback_scene());
-  int idx = fallback_combo_->findData(fb);
-  if (idx >= 0)
-    fallback_combo_->setCurrentIndex(idx);
 
   fade_check_->setChecked(config_->get_transition_fade());
   fade_duration_spin_->setValue(config_->get_fade_duration_ms());
@@ -338,8 +323,6 @@ void SettingsDialog::save_to_config() {
   config_->set_motion_influence(mi);
 
   config_->set_hold_time_ms(hold_time_spin_->value());
-  config_->set_fallback_scene(
-      fallback_combo_->currentData().toString().toStdString());
   config_->set_transition_fade(fade_check_->isChecked());
   config_->set_fade_duration_ms(fade_duration_spin_->value());
 
@@ -364,9 +347,23 @@ void SettingsDialog::on_generate_scenes() {
   sgs.format = (PodcastFormat)gen_format_combo_->currentData().toInt();
   sgs.audio_sources = audio_sources_;
 
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Generate Scenes",
+                                "Are you sure you want to generate new scenes?\n\n"
+                                "This will delete all previously generated scenes and their layouts.",
+                                QMessageBox::Yes | QMessageBox::No);
+  if (reply != QMessageBox::Yes) {
+      return;
+  }
+
   if (SceneGenerator::generate(sgs)) {
     // Add newly generated scenes to cached list so they can be selected
-    const char *new_scenes[] = {"Host 1 Input", "Guest 1 Input", "Guest 2 Input", "Host 1 Solo", "Guest 1 Solo", "Guest 2 Solo", "Split Screen", "Fallback", "\U0001F399\uFE0F Live Audio Mix"};
+    const char *new_scenes[] = {
+        "🟢 Starting Soon", "👤 Person 1", "👤 Person 2", "👤 Person 3", "👤 Person 4",
+        "👥 Split Screen", "🔴 Thank You", "--- INPUTS ---",
+        "📺 Inputs / Person 1", "📺 Inputs / Person 2", "📺 Inputs / Person 3", "📺 Inputs / Person 4",
+        "\U0001F399\uFE0F Live Audio Mix"
+    };
     for (const char *ns : new_scenes) {
         if (std::find(scene_names_.begin(), scene_names_.end(), ns) == scene_names_.end()) {
             scene_names_.push_back(ns);
@@ -389,35 +386,18 @@ void SettingsDialog::on_generate_scenes() {
         return "";
     };
 
-    CamMapping m1;
-    m1.video_source = "Host 1 Input";
-    m1.audio_source = find_audio("Host 1 Input");
-    m1.scene_name = "Host 1 Solo";
-    m1.priority = Priority::High;
-    add_mapping_row(m1);
-
-    CamMapping m2;
-    m2.video_source = "Guest 1 Input";
-    m2.audio_source = audio_sources_.size() > 1 ? audio_sources_[1] : find_audio("Guest 1 Input");
-    m2.scene_name = "Guest 1 Solo";
-    m2.priority = Priority::Medium;
-    add_mapping_row(m2);
-
-    if (sgs.format == PodcastFormat::PowerDynamic) {
-        CamMapping m3;
-        m3.video_source = "Guest 2 Input";
-        m3.audio_source = audio_sources_.size() > 2 ? audio_sources_[2] : find_audio("Guest 2 Input");
-        m3.scene_name = "Guest 2 Solo";
-        m3.priority = Priority::Medium;
-        add_mapping_row(m3);
+    int num_people = 2;
+    if (sgs.format == PodcastFormat::ThreePerson) num_people = 3;
+    if (sgs.format == PodcastFormat::FourPerson) num_people = 4;
+    
+    for (int i = 1; i <= num_people; ++i) {
+        CamMapping m;
+        m.video_source = "📺 Inputs / Person " + std::to_string(i);
+        m.audio_source = audio_sources_.size() >= (size_t)i ? audio_sources_[i-1] : find_audio(m.video_source);
+        m.scene_name = "👤 Person " + std::to_string(i);
+        m.priority = Priority::Medium;
+        add_mapping_row(m);
     }
-
-    int fb_idx = fallback_combo_->findText("Fallback");
-    if (fb_idx < 0) {
-        fallback_combo_->addItem("Fallback");
-        fb_idx = fallback_combo_->findText("Fallback");
-    }
-    fallback_combo_->setCurrentIndex(fb_idx);
     
     QMessageBox::information(this, "Scenes Generated", "Successfully generated podcast scenes and auto-populated mappings!");
     save_to_config();

@@ -68,7 +68,6 @@ void Config::load() {
   hold_time_ms_ = (int)obs_data_get_int(d, "hold_time_ms");
   if (hold_time_ms_ <= 0)
     hold_time_ms_ = 800;
-  fallback_scene_ = obs_data_get_string(d, "fallback_scene");
   transition_fade_ = obs_data_get_bool(d, "transition_fade");
   fade_duration_ms_ = (int)obs_data_get_int(d, "fade_duration_ms");
   if (fade_duration_ms_ <= 0)
@@ -100,7 +99,6 @@ void Config::save() const {
   obs_data_set_string(d, "responsiveness", resp_str(responsiveness_));
   obs_data_set_string(d, "motion_influence", motion_inf_str(motion_influence_));
   obs_data_set_int(d, "hold_time_ms", hold_time_ms_);
-  obs_data_set_string(d, "fallback_scene", fallback_scene_.c_str());
   obs_data_set_bool(d, "transition_fade", transition_fade_);
   obs_data_set_int(d, "fade_duration_ms", fade_duration_ms_);
   obs_data_set_int(d, "gen_format", gen_format_);

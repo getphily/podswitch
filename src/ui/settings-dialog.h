@@ -38,7 +38,6 @@ private:
     QRadioButton *relaxed_radio_, *neutral_radio_, *fast_radio_;
     QRadioButton *mi_off_radio_, *mi_moderate_radio_, *mi_high_radio_;
     QSpinBox *hold_time_spin_, *fade_duration_spin_;
-    QComboBox *fallback_combo_;
     QCheckBox *fade_check_;
     std::vector<std::string> audio_sources_, video_sources_, scene_names_;
     void build_ui(); void load_from_config(); void save_to_config();

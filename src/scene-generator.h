@@ -3,12 +3,13 @@
 #include <vector>
 
 enum class PodcastFormat {
-    OneOnOne,
-    PowerDynamic
+    TwoPerson,
+    ThreePerson,
+    FourPerson
 };
 
 struct SceneGenSettings {
-    PodcastFormat format = PodcastFormat::OneOnOne;
+    PodcastFormat format = PodcastFormat::TwoPerson;
     std::vector<std::string> audio_sources;
 };
 
@@ -26,7 +27,7 @@ private:
     static void delete_existing_generated_scenes();
     static obs_scene_t *create_audio_mix_scene(const std::vector<std::string> &audio_sources);
     static void generate_input_scene(const char *name);
-    static void generate_1_on_1(const SceneGenSettings &settings, obs_source_t *audio_mix);
-    static void generate_power_dynamic(const SceneGenSettings &settings, obs_source_t *audio_mix);
+    static void generate_layout(int num_people, obs_source_t *audio_mix);
     static void generate_fallback(obs_source_t *audio_mix);
+    static void generate_static_scene(const char *scene_name, const char *display_text);
 };

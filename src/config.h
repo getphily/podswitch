@@ -14,8 +14,6 @@ public:
     void set_motion_influence(MotionInfluence m) { motion_influence_ = m; }
     int get_hold_time_ms() const { return hold_time_ms_; }
     void set_hold_time_ms(int ms) { hold_time_ms_ = ms; }
-    std::string get_fallback_scene() const { return fallback_scene_; }
-    void set_fallback_scene(const std::string &s) { fallback_scene_ = s; }
     bool get_transition_fade() const { return transition_fade_; }
     void set_transition_fade(bool f) { transition_fade_ = f; }
     int get_fade_duration_ms() const { return fade_duration_ms_; }
@@ -30,7 +28,6 @@ private:
     Responsiveness responsiveness_ = Responsiveness::Neutral;
     MotionInfluence motion_influence_ = MotionInfluence::Moderate;
     int hold_time_ms_ = 800;
-    std::string fallback_scene_;
     bool transition_fade_ = false;
     int fade_duration_ms_ = 300;
     

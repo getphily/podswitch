@@ -4,9 +4,16 @@
 
 // Names we manage — used for clean-slate deletion
 static const char *kGeneratedScenes[] = {
-    "Host 1 Input", "Guest 1 Input", "Guest 2 Input",
-    "Host 1 Solo", "Guest 1 Solo", "Guest 2 Solo",
-    "Split Screen", "Fallback", "\U0001F399\uFE0F Live Audio Mix", nullptr
+    "🟢 Starting Soon", "👤 Person 1", "👤 Person 2", "👤 Person 3", "👤 Person 4",
+    "👥 Split Screen", "🔴 Thank You", "--- INPUTS ---",
+    "📺 Inputs / Person 1", "📺 Inputs / Person 2", "📺 Inputs / Person 3", "📺 Inputs / Person 4",
+    "\U0001F399\uFE0F Live Audio Mix", 
+    // Legacy names from v1.0.0 for proper cleanup
+    "Fallback", "Starting Soon", "Person 1", "Person 2", "Person 3", "Person 4",
+    "Split Screen", "Thank You", "Inputs / Person 1", "Inputs / Person 2", "Inputs / Person 3", "Inputs / Person 4",
+    "Person 1 Input", "Person 2 Input", "Person 3 Input", "Person 4 Input",
+    "Person 1 Solo", "Person 2 Solo", "Person 3 Solo", "Person 4 Solo",
+    "Grid Scene", nullptr
 };
 
 void SceneGenerator::delete_existing_generated_scenes() {
@@ -19,25 +26,6 @@ void SceneGenerator::delete_existing_generated_scenes() {
     }
 }
 
-// Returns the obs_scene_t* for the audio mix scene.
-obs_scene_t *SceneGenerator::create_audio_mix_scene(
-    const std::vector<std::string> &audio_sources) {
-    obs_scene_t *audio_scene = obs_scene_create("\U0001F399\uFE0F Live Audio Mix");
-    if (!audio_scene)
-        return nullptr;
-
-    for (const auto &name : audio_sources) {
-        obs_source_t *source = obs_get_source_by_name(name.c_str());
-        if (source) {
-            obs_scene_add(audio_scene, source);
-            obs_source_release(source);
-        }
-    }
-    return audio_scene;
-}
-
-// Adds a single video source into a scene with aspect-ratio-aware scaling.
-// Audio is NOT added here — it is added once per scene after all video sources.
 static void add_video_to_scene(obs_scene_t *scene,
                                const std::string &source_name,
                                bool full_screen,
@@ -53,7 +41,6 @@ static void add_video_to_scene(obs_scene_t *scene,
     uint32_t base_h = obs_source_get_height(video_source);
 
     if (item && base_w > 0 && base_h > 0) {
-        // Enforce exactly 1920x1080 as per General Guidance
         float canvas_w = 1920.0f;
         float canvas_h = 1080.0f;
 
@@ -99,23 +86,17 @@ static void add_video_to_scene(obs_scene_t *scene,
     obs_source_release(video_source);
 }
 
-// Nests the live audio mix source into a scene exactly once.
-static void add_audio_mix_to_scene(obs_scene_t *scene,
-                                   obs_source_t *audio_mix) {
+static void add_audio_mix_to_scene(obs_scene_t *scene, obs_source_t *audio_mix) {
     if (audio_mix)
         obs_scene_add(scene, audio_mix);
 }
 
-void SceneGenerator::generate_input_scene(const char *name) {
-    obs_scene_t *scene = obs_scene_create(name);
-    
-    // Create a color source (dark gray) for the placeholder
+static void populate_static_scene(obs_scene_t *scene, const char *display_text) {
     obs_data_t *settings = obs_data_create();
-    obs_data_set_int(settings, "color", 0xFF303030);
+    obs_data_set_int(settings, "color", 0xFF202020);
     obs_data_set_int(settings, "width", 1920);
     obs_data_set_int(settings, "height", 1080);
-    
-    obs_source_t *color_bg = obs_source_create("color_source", (std::string(name) + " Background").c_str(), settings, nullptr);
+    obs_source_t *color_bg = obs_source_create("color_source", (std::string(obs_source_get_name(obs_scene_get_source(scene))) + " BG").c_str(), settings, nullptr);
     obs_data_release(settings);
     
     if (color_bg) {
@@ -123,116 +104,100 @@ void SceneGenerator::generate_input_scene(const char *name) {
         obs_source_release(color_bg);
     }
     
-    // Create a text source for the placeholder
-    obs_data_t *text_settings = obs_data_create();
-    obs_data_set_string(text_settings, "text", (std::string("Add ") + name + " Here").c_str());
-    obs_source_t *text_src = obs_source_create("text_ft2_source_v2", (std::string(name) + " Text").c_str(), text_settings, nullptr);
-    obs_data_release(text_settings);
-    
-    if (text_src) {
-        obs_sceneitem_t *item = obs_scene_add(scene, text_src);
-        struct vec2 pos;
-        vec2_set(&pos, 100, 100);
-        obs_sceneitem_set_pos(item, &pos);
-        obs_source_release(text_src);
+    if (display_text) {
+        obs_data_t *text_settings = obs_data_create();
+        obs_data_set_string(text_settings, "text", display_text);
+        obs_source_t *text_src = obs_source_create("text_ft2_source_v2", (std::string(obs_source_get_name(obs_scene_get_source(scene))) + " Text").c_str(), text_settings, nullptr);
+        obs_data_release(text_settings);
+        if (text_src) {
+            obs_sceneitem_t *item = obs_scene_add(scene, text_src);
+            struct vec2 pos; vec2_set(&pos, 200, 200);
+            obs_sceneitem_set_pos(item, &pos);
+            obs_source_release(text_src);
+        }
     }
-    
-    obs_scene_release(scene);
-}
-
-void SceneGenerator::generate_1_on_1(const SceneGenSettings &settings,
-                                     obs_source_t *audio_mix) {
-    generate_input_scene("Host 1 Input");
-    generate_input_scene("Guest 1 Input");
-
-    // Host 1 Solo
-    obs_scene_t *host_scene = obs_scene_create("Host 1 Solo");
-    add_video_to_scene(host_scene, "Host 1 Input", true);
-    add_audio_mix_to_scene(host_scene, audio_mix);
-    obs_scene_release(host_scene);
-
-    // Guest 1 Solo
-    obs_scene_t *guest_scene = obs_scene_create("Guest 1 Solo");
-    add_video_to_scene(guest_scene, "Guest 1 Input", true);
-    add_audio_mix_to_scene(guest_scene, audio_mix);
-    obs_scene_release(guest_scene);
-
-    // 50/50 Split Screen
-    obs_scene_t *split_scene = obs_scene_create("Split Screen");
-    add_video_to_scene(split_scene, "Host 1 Input",  false, 0,   0, 960, 1080);
-    add_video_to_scene(split_scene, "Guest 1 Input", false, 960, 0, 960, 1080);
-    add_audio_mix_to_scene(split_scene, audio_mix);
-    obs_scene_release(split_scene);
-}
-
-void SceneGenerator::generate_power_dynamic(const SceneGenSettings &settings,
-                                            obs_source_t *audio_mix) {
-    generate_input_scene("Host 1 Input");
-    generate_input_scene("Guest 1 Input");
-    generate_input_scene("Guest 2 Input");
-
-    // Solos
-    obs_scene_t *host_scene = obs_scene_create("Host 1 Solo");
-    add_video_to_scene(host_scene, "Host 1 Input", true);
-    add_audio_mix_to_scene(host_scene, audio_mix);
-    obs_scene_release(host_scene);
-
-    obs_scene_t *g1_scene = obs_scene_create("Guest 1 Solo");
-    add_video_to_scene(g1_scene, "Guest 1 Input", true);
-    add_audio_mix_to_scene(g1_scene, audio_mix);
-    obs_scene_release(g1_scene);
-
-    obs_scene_t *g2_scene = obs_scene_create("Guest 2 Solo");
-    add_video_to_scene(g2_scene, "Guest 2 Input", true);
-    add_audio_mix_to_scene(g2_scene, audio_mix);
-    obs_scene_release(g2_scene);
-
-    // Asymmetrical Split: Host 50% left, Guests stacked 25% each on right
-    obs_scene_t *split_scene = obs_scene_create("Split Screen");
-    add_video_to_scene(split_scene, "Host 1 Input",  false, 0,   0,   960, 1080);
-    add_video_to_scene(split_scene, "Guest 1 Input", false, 960, 0,   960, 540);
-    add_video_to_scene(split_scene, "Guest 2 Input", false, 960, 540, 960, 540);
-    add_audio_mix_to_scene(split_scene, audio_mix);
-    obs_scene_release(split_scene);
-}
-
-void SceneGenerator::generate_fallback(obs_source_t *audio_mix) {
-    obs_scene_t *fallback_scene = obs_scene_create("Fallback");
-    
-    // Create a color source (dark gray) for the placeholder
-    obs_data_t *settings = obs_data_create();
-    obs_data_set_int(settings, "color", 0xFF202020);
-    obs_data_set_int(settings, "width", 1920);
-    obs_data_set_int(settings, "height", 1080);
-    
-    obs_source_t *color_bg = obs_source_create("color_source", "Placeholder Background", settings, nullptr);
-    obs_data_release(settings);
-    
-    if (color_bg) {
-        obs_scene_add(fallback_scene, color_bg);
-        obs_source_release(color_bg);
-    }
-    
-    add_audio_mix_to_scene(fallback_scene, audio_mix);
-    obs_scene_release(fallback_scene);
 }
 
 bool SceneGenerator::generate(const SceneGenSettings &settings) {
     delete_existing_generated_scenes();
 
-    obs_scene_t *audio_scene = create_audio_mix_scene(settings.audio_sources);
-    obs_source_t *audio_mix = audio_scene ? obs_scene_get_source(audio_scene) : nullptr;
+    int num_people = 2;
+    if (settings.format == PodcastFormat::ThreePerson) num_people = 3;
+    if (settings.format == PodcastFormat::FourPerson) num_people = 4;
 
-    if (settings.format == PodcastFormat::OneOnOne)
-        generate_1_on_1(settings, audio_mix);
-    else
-        generate_power_dynamic(settings, audio_mix);
-        
-    generate_fallback(audio_mix);
+    // 1. Create Scenes in exact reverse order so they stack logically top-to-bottom in OBS
+    obs_scene_t *audio_scene = obs_scene_create("\U0001F399\uFE0F Live Audio Mix");
+    obs_source_t *audio_mix = obs_scene_get_source(audio_scene);
 
-    if (audio_scene) {
-        obs_scene_release(audio_scene);
+    std::vector<obs_scene_t*> inputs(num_people);
+    for (int i = num_people; i >= 1; --i) {
+        inputs[i-1] = obs_scene_create(("📺 Inputs / Person " + std::to_string(i)).c_str());
     }
+
+    obs_scene_t *scene_inputs_folder = obs_scene_create("--- INPUTS ---");
+    obs_scene_t *scene_thankyou = obs_scene_create("🔴 Thank You");
+    obs_scene_t *scene_grid = obs_scene_create("👥 Split Screen");
+
+    std::vector<obs_scene_t*> solos(num_people);
+    for (int i = num_people; i >= 1; --i) {
+        solos[i-1] = obs_scene_create(("👤 Person " + std::to_string(i)).c_str());
+    }
+
+    obs_scene_t *scene_starting = obs_scene_create("🟢 Starting Soon");
+
+    // 2. Populate Audio Mix
+    for (const auto &name : settings.audio_sources) {
+        obs_source_t *source = obs_get_source_by_name(name.c_str());
+        if (source) {
+            obs_scene_add(audio_scene, source);
+            obs_source_release(source);
+        }
+    }
+
+    // 3. Populate Inputs
+    for (int i = 0; i < num_people; ++i) {
+        populate_static_scene(inputs[i], ("Add Camera " + std::to_string(i+1) + " Here").c_str());
+    }
+
+    // 4. Populate Separator
+    populate_static_scene(scene_inputs_folder, nullptr);
+
+    // 5. Populate Thank You
+    populate_static_scene(scene_thankyou, "Thanks for Watching");
+
+    // 7. Populate Split Screen
+    if (num_people == 2) {
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 1", false, 0,   0, 960, 1080);
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 2", false, 960, 0, 960, 1080);
+    } else if (num_people == 3) {
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 1", false, 0,    0, 640, 1080);
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 2", false, 640,  0, 640, 1080);
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 3", false, 1280, 0, 640, 1080);
+    } else if (num_people == 4) {
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 1", false, 0,   0,   960, 540);
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 2", false, 960, 0,   960, 540);
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 3", false, 0,   540, 960, 540);
+        add_video_to_scene(scene_grid, "📺 Inputs / Person 4", false, 960, 540, 960, 540);
+    }
+    add_audio_mix_to_scene(scene_grid, audio_mix);
+
+    // 8. Populate Solos
+    for (int i = 0; i < num_people; ++i) {
+        add_video_to_scene(solos[i], "📺 Inputs / Person " + std::to_string(i+1), true);
+        add_audio_mix_to_scene(solos[i], audio_mix);
+    }
+
+    // 9. Populate Starting Soon
+    populate_static_scene(scene_starting, "Starting Soon...");
+
+    // 9. Release references
+    obs_scene_release(scene_starting);
+    obs_scene_release(scene_grid);
+    obs_scene_release(scene_thankyou);
+    obs_scene_release(scene_inputs_folder);
+    obs_scene_release(audio_scene);
+    for (auto s : solos) obs_scene_release(s);
+    for (auto s : inputs) obs_scene_release(s);
 
     return true;
 }

@@ -55,7 +55,6 @@ public:
     void set_responsiveness(Responsiveness r);
     void set_motion_influence(MotionInfluence m);
     void set_hold_time_ms(int ms);
-    void set_fallback_scene(const std::string &scene_name);
     void set_switch_callback(SwitchCallback cb);
     void on_audio_level(const std::string &source_name, float dbfs);
     void update_motion_energy(const std::string &source_name, float energy);
@@ -73,7 +72,6 @@ private:
     Responsiveness responsiveness_ = Responsiveness::Neutral;
     MotionInfluence motion_influence_ = MotionInfluence::Moderate;
     int hold_time_ms_ = 800;
-    std::string fallback_scene_;
     SwitchCallback switch_cb_;
     std::atomic<bool> enabled_{false};
     std::string current_scene_;

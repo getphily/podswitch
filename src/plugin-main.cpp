@@ -57,7 +57,6 @@ static void apply_config() {
   g_engine->set_mappings(g_config->get_mappings());
   g_engine->set_responsiveness(g_config->get_responsiveness());
   g_engine->set_hold_time_ms(g_config->get_hold_time_ms());
-  g_engine->set_fallback_scene(g_config->get_fallback_scene());
   g_monitor->clear();
   if (g_motion) g_motion->clear();
   for (auto &m : g_config->get_mappings()) {
