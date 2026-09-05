@@ -70,12 +70,10 @@ void AutoCamDock::set_toggle_appearance(bool enabled) {
   if (enabled) {
     toggle_btn_->setText("● PodSwitch: ON");
     toggle_btn_->setStyleSheet(
-        "QPushButton{background:#2a6e32;color:white;font-weight:bold;padding:"
-        "6px;border-radius:4px;}");
+        "QPushButton{background:#2a6e32;color:white;font-weight:bold;font-size:16px;padding:12px;border-radius:4px;}");
   } else {
     toggle_btn_->setText("○ PodSwitch: OFF");
-    toggle_btn_->setStyleSheet("QPushButton{background:#444;color:#aaa;font-"
-                               "weight:bold;padding:6px;border-radius:4px;}");
+    toggle_btn_->setStyleSheet("QPushButton{background:#444;color:#aaa;font-weight:bold;font-size:16px;padding:12px;border-radius:4px;}");
   }
 }
 void AutoCamDock::on_toggle_clicked() {
@@ -137,11 +135,19 @@ void AutoCamDock::refresh_mappings(
     hbox->addWidget(label);
     hbox->addLayout(vbars, 1);
     vu_layout_->addWidget(rw);
-    vu_rows_.push_back({label, bar, motion_bar});
+    vu_rows_.push_back({label, bar, motion_bar, scene});
   }
 }
 void AutoCamDock::update_vu_meters() {
   auto levels = engine_->get_levels();
+  std::string active_scene = engine_->get_current_scene();
+  for (size_t i = 0; i < vu_rows_.size(); ++i) {
+      if (vu_rows_[i].scene_name == active_scene && !active_scene.empty()) {
+          vu_rows_[i].label->setStyleSheet("font-weight: bold; color: #2ecc71;");
+      } else {
+          vu_rows_[i].label->setStyleSheet("");
+      }
+  }
   for (const auto &level : levels) {
     for (size_t i = 0; i < vu_rows_.size(); ++i) {
       if (vu_rows_[i].label->text().startsWith(QString::fromStdString(level.source_name) + " →")) {

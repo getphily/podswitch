@@ -3,10 +3,56 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <obs-module.h>
 
-// Downscale resolution for motion analysis — keeps CPU usage near zero
 static constexpr uint32_t kThumbW = 64;
 static constexpr uint32_t kThumbH = 36;
+
+struct MotionFilterData {
+    MotionDetector *detector = nullptr;
+    std::string source_name;
+};
+
+static const char *motion_filter_get_name(void *) { return "PodSwitch Motion Tracker"; }
+
+static void *motion_filter_create(obs_data_t *settings, obs_source_t *context) {
+    auto *data = new MotionFilterData();
+    data->detector = (MotionDetector *)obs_data_get_int(settings, "motion_detector_ptr");
+    data->source_name = obs_data_get_string(settings, "source_name");
+    return data;
+}
+
+static void motion_filter_update(void *data_ptr, obs_data_t *settings) {
+    auto *data = (MotionFilterData *)data_ptr;
+    data->detector = (MotionDetector *)obs_data_get_int(settings, "motion_detector_ptr");
+    data->source_name = obs_data_get_string(settings, "source_name");
+}
+
+static void motion_filter_destroy(void *data_ptr) {
+    delete (MotionFilterData *)data_ptr;
+}
+
+static struct obs_source_frame *motion_filter_video(void *data_ptr, struct obs_source_frame *frame) {
+    auto *data = (MotionFilterData *)data_ptr;
+    if (data->detector) {
+        data->detector->process_frame(data->source_name, frame);
+    }
+    return frame;
+}
+
+struct obs_source_info motion_filter_info = {};
+
+void podswitch_register_motion_filter() {
+    motion_filter_info.id = "podswitch_motion_filter";
+    motion_filter_info.type = OBS_SOURCE_TYPE_FILTER;
+    motion_filter_info.output_flags = OBS_SOURCE_VIDEO;
+    motion_filter_info.get_name = motion_filter_get_name;
+    motion_filter_info.create = motion_filter_create;
+    motion_filter_info.destroy = motion_filter_destroy;
+    motion_filter_info.update = motion_filter_update;
+    motion_filter_info.filter_video = motion_filter_video;
+    obs_register_source(&motion_filter_info);
+}
 
 MotionDetector::MotionDetector() {}
 
@@ -25,20 +71,29 @@ void MotionDetector::add_source(const std::string &source_name) {
         blog(LOG_WARNING, "[podswitch-motion] Source not found: %s", source_name.c_str());
         return;
     }
+    
+    obs_weak_source_t *weak = obs_source_get_weak_source(source);
+    obs_weak_source_t *weak_filter = nullptr;
+
+    obs_source_t *filter = obs_source_create("podswitch_motion_filter", "PodSwitch Motion", nullptr, nullptr);
+    if (filter) {
+        obs_data_t *settings = obs_data_create();
+        obs_data_set_int(settings, "motion_detector_ptr", (long long)this);
+        obs_data_set_string(settings, "source_name", source_name.c_str());
+        obs_source_update(filter, settings);
+        obs_data_release(settings);
+        
+        obs_source_filter_add(source, filter);
+        weak_filter = obs_source_get_weak_source(filter);
+        obs_source_release(filter);
+    }
+
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        // Avoid double-registering
-        for (auto &ws : watched_) {
-            if (ws.name == source_name) {
-                obs_source_release(source);
-                return;
-            }
-        }
-        watched_.push_back({source_name, source});
+        watched_.push_back({source_name, weak, weak_filter});
         states_[source_name] = {};
     }
-    obs_source_add_video_capture_callback(source, obs_video_cb, this);
-    // Keep a ref alive — released in clear()
+    obs_source_release(source);
 }
 
 void MotionDetector::clear() {
@@ -49,42 +104,27 @@ void MotionDetector::clear() {
         states_.clear();
     }
     for (auto &ws : to_clear) {
-        if (ws.source) {
-            obs_source_remove_video_capture_callback(ws.source, obs_video_cb, this);
-            obs_source_release(ws.source);
+        obs_source_t *source = nullptr;
+        obs_source_t *filter = nullptr;
+        
+        if (ws.weak_source) source = obs_weak_source_get_source(ws.weak_source);
+        if (ws.weak_filter) filter = obs_weak_source_get_source(ws.weak_filter);
+        
+        if (source && filter) {
+            obs_source_filter_remove(source, filter);
         }
+        
+        if (source) obs_source_release(source);
+        if (filter) obs_source_release(filter);
+        
+        if (ws.weak_source) obs_weak_source_release(ws.weak_source);
+        if (ws.weak_filter) obs_weak_source_release(ws.weak_filter);
     }
 }
 
-// ─── Static OBS render-thread callback ───────────────────────────────────────
-// CRITICAL: This runs on the OBS render thread. We do MINIMAL work here:
-//   1. Extract source name
-//   2. Downsample the Y (luma) plane to 64x36
-//   3. Compute mean absolute difference against previous frame
-//   4. Store result and invoke callback (cheap lambda, no locks on hot path)
-void MotionDetector::obs_video_cb(void *param,
-                                  obs_source_t *source,
-                                  const struct obs_source_frame *frame) {
-    if (!frame || !param || !source)
-        return;
+void MotionDetector::process_frame(const std::string &source_name, const struct obs_source_frame *frame) {
+    if (!frame) return;
 
-    auto *self = static_cast<MotionDetector *>(param);
-
-    // Identify which source this is by matching the pointer OBS gave us
-    std::string source_name;
-    {
-        std::lock_guard<std::mutex> lock(self->mutex_);
-        for (auto &ws : self->watched_) {
-            if (ws.source == source) {
-                source_name = ws.name;
-                break;
-            }
-        }
-    }
-    if (source_name.empty())
-        return;
-
-    // Only handle formats that have a contiguous Y plane
     if (frame->format != VIDEO_FORMAT_I420 &&
         frame->format != VIDEO_FORMAT_NV12 &&
         frame->format != VIDEO_FORMAT_I444 &&
@@ -95,22 +135,19 @@ void MotionDetector::obs_video_cb(void *param,
 
     const uint32_t fw = frame->width;
     const uint32_t fh = frame->height;
-    if (fw == 0 || fh == 0)
-        return;
+    if (fw == 0 || fh == 0) return;
 
-    // Downsample luma to kThumbW x kThumbH using nearest-neighbour
-    // For packed YUV formats (YUY2, UYVY, YVYU), luma is every other byte
     int luma_offset = 0;
     int pixel_stride = 1;
     if (frame->format == VIDEO_FORMAT_YUY2 || frame->format == VIDEO_FORMAT_YVYU) {
-        pixel_stride = 2; // Y U Y V → luma at bytes 0, 2, 4, ...
+        pixel_stride = 2;
         luma_offset = 0;
     } else if (frame->format == VIDEO_FORMAT_UYVY) {
-        pixel_stride = 2; // U Y V Y → luma at bytes 1, 3, 5, ...
+        pixel_stride = 2;
         luma_offset = 1;
     }
 
-    std::vector<uint8_t> thumb(kThumbW * kThumbH);
+    std::array<uint8_t, kThumbW * kThumbH> thumb;
     const uint8_t *src = frame->data[0];
     const uint32_t stride = frame->linesize[0];
     for (uint32_t ty = 0; ty < kThumbH; ++ty) {
@@ -123,23 +160,31 @@ void MotionDetector::obs_video_cb(void *param,
 
     float energy = 0.0f;
     {
-        std::lock_guard<std::mutex> lock(self->mutex_);
-        auto &state = self->states_[source_name];
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto &state = states_[source_name];
+        
+        // Frame skip: only process every 3rd frame (~20fps for a 60fps source)
+        if (++state.frame_skip_counter < 3) {
+            return;
+        }
+        state.frame_skip_counter = 0;
+
         if (state.prev_luma.size() == thumb.size()) {
-            // Compute Mean Absolute Difference (MAD) across all pixels
             uint64_t sum = 0;
             for (size_t i = 0; i < thumb.size(); ++i) {
                 int diff = (int)thumb[i] - (int)state.prev_luma[i];
                 sum += (uint64_t)std::abs(diff);
             }
             float mad = (float)sum / (float)thumb.size();
-            // Scale to 0-100 range: MAD of 25 luma units = 100% energy
             energy = std::min(mad * (100.0f / 25.0f), 100.0f);
         }
-        state.prev_luma = std::move(thumb);
-
-        // Fire callback while lock is held (callback is a lightweight store)
-        if (self->callback_)
-            self->callback_(source_name, energy);
+        
+        // Store into state.prev_luma (resize if needed)
+        if (state.prev_luma.size() != thumb.size()) {
+            state.prev_luma.resize(thumb.size());
+        }
+        std::copy(thumb.begin(), thumb.end(), state.prev_luma.begin());
+        
+        if (callback_) callback_(source_name, energy);
     }
 }

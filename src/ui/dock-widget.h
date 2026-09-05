@@ -29,7 +29,7 @@ private:
     QPushButton *toggle_btn_, *settings_btn_;
     QComboBox *responsiveness_combo_;
     QWidget *vu_container_; QVBoxLayout *vu_layout_;
-    struct VURow{QLabel *label;QProgressBar *bar;QProgressBar *motion_bar;};
+    struct VURow{QLabel *label;QProgressBar *bar;QProgressBar *motion_bar; std::string scene_name;};
     std::vector<VURow> vu_rows_;
     QTimer *update_timer_;
     void build_ui(); void set_toggle_appearance(bool enabled);

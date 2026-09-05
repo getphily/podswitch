@@ -18,8 +18,8 @@ void SceneGenerator::delete_existing_generated_scenes() {
     }
 }
 
-// Returns the obs_source_t* for the audio mix scene (borrowed ref).
-obs_source_t *SceneGenerator::create_audio_mix_scene(
+// Returns the obs_scene_t* for the audio mix scene.
+obs_scene_t *SceneGenerator::create_audio_mix_scene(
     const std::vector<std::string> &audio_sources) {
     obs_scene_t *audio_scene = obs_scene_create("\U0001F399\uFE0F Live Audio Mix");
     if (!audio_scene)
@@ -32,10 +32,7 @@ obs_source_t *SceneGenerator::create_audio_mix_scene(
             obs_source_release(source);
         }
     }
-    // obs_scene_get_source returns a borrowed ref kept alive by the scene object
-    obs_source_t *out = obs_scene_get_source(audio_scene);
-    obs_scene_release(audio_scene);
-    return out;
+    return audio_scene;
 }
 
 // Adds a single video source into a scene with aspect-ratio-aware scaling.
@@ -44,7 +41,7 @@ static void add_video_to_scene(obs_scene_t *scene,
                                const std::string &source_name,
                                bool full_screen,
                                float pos_x = 0, float pos_y = 0,
-                               float region_w = 1920, float region_h = 1080) {
+                               float region_w = -1, float region_h = -1) {
     obs_source_t *video_source = obs_get_source_by_name(source_name.c_str());
     if (!video_source)
         return;
@@ -55,15 +52,26 @@ static void add_video_to_scene(obs_scene_t *scene,
     uint32_t base_h = obs_source_get_height(video_source);
 
     if (item && base_w > 0 && base_h > 0) {
+        struct obs_video_info ovi;
+        float canvas_w = 1920.0f;
+        float canvas_h = 1080.0f;
+        if (obs_get_video_info(&ovi)) {
+            canvas_w = (float)ovi.base_width;
+            canvas_h = (float)ovi.base_height;
+        }
+
+        if (region_w < 0) region_w = canvas_w;
+        if (region_h < 0) region_h = canvas_h;
+
         if (full_screen) {
-            float sx = 1920.0f / (float)base_w;
-            float sy = 1080.0f / (float)base_h;
+            float sx = canvas_w / (float)base_w;
+            float sy = canvas_h / (float)base_h;
             float s  = (sx < sy) ? sx : sy;
             struct vec2 scale; vec2_set(&scale, s, s);
             struct vec2 pos;
             vec2_set(&pos,
-                     (1920.0f - (float)base_w * s) / 2.0f,
-                     (1080.0f - (float)base_h * s) / 2.0f);
+                     (canvas_w - (float)base_w * s) / 2.0f,
+                     (canvas_h - (float)base_h * s) / 2.0f);
             obs_sceneitem_set_pos(item, &pos);
             obs_sceneitem_set_scale(item, &scale);
         } else {
@@ -153,12 +161,17 @@ void SceneGenerator::generate_power_dynamic(const SceneGenSettings &settings,
 bool SceneGenerator::generate(const SceneGenSettings &settings) {
     delete_existing_generated_scenes();
 
-    obs_source_t *audio_mix = create_audio_mix_scene(settings.audio_sources);
+    obs_scene_t *audio_scene = create_audio_mix_scene(settings.audio_sources);
+    obs_source_t *audio_mix = audio_scene ? obs_scene_get_source(audio_scene) : nullptr;
 
     if (settings.format == PodcastFormat::OneOnOne)
         generate_1_on_1(settings, audio_mix);
     else
         generate_power_dynamic(settings, audio_mix);
+
+    if (audio_scene) {
+        obs_scene_release(audio_scene);
+    }
 
     return true;
 }

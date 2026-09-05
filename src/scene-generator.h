@@ -27,7 +27,7 @@ public:
     static bool generate(const SceneGenSettings &settings);
 private:
     static void delete_existing_generated_scenes();
-    static obs_source_t *create_audio_mix_scene(const std::vector<std::string> &audio_sources);
+    static obs_scene_t *create_audio_mix_scene(const std::vector<std::string> &audio_sources);
     static void generate_1_on_1(const SceneGenSettings &settings, obs_source_t *audio_mix);
     static void generate_power_dynamic(const SceneGenSettings &settings, obs_source_t *audio_mix);
 };

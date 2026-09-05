@@ -17,6 +17,20 @@ static Responsiveness str_resp(const char *s) {
     return Responsiveness::Fast;
   return Responsiveness::Neutral;
 }
+static const char *motion_inf_str(MotionInfluence m) {
+  if (m == MotionInfluence::Off)
+    return "off";
+  if (m == MotionInfluence::High)
+    return "high";
+  return "moderate";
+}
+static MotionInfluence str_motion_inf(const char *s) {
+  if (s && std::string(s) == "off")
+    return MotionInfluence::Off;
+  if (s && std::string(s) == "high")
+    return MotionInfluence::High;
+  return MotionInfluence::Moderate;
+}
 static const char *prio_str(Priority p) {
   if (p == Priority::Low)
     return "low";
@@ -50,6 +64,7 @@ void Config::load() {
     return;
   }
   responsiveness_ = str_resp(obs_data_get_string(d, "responsiveness"));
+  motion_influence_ = str_motion_inf(obs_data_get_string(d, "motion_influence"));
   hold_time_ms_ = (int)obs_data_get_int(d, "hold_time_ms");
   if (hold_time_ms_ <= 0)
     hold_time_ms_ = 800;
@@ -58,6 +73,10 @@ void Config::load() {
   fade_duration_ms_ = (int)obs_data_get_int(d, "fade_duration_ms");
   if (fade_duration_ms_ <= 0)
     fade_duration_ms_ = 300;
+  gen_format_ = (int)obs_data_get_int(d, "gen_format");
+  gen_host_ = obs_data_get_string(d, "gen_host");
+  gen_guest1_ = obs_data_get_string(d, "gen_guest1");
+  gen_guest2_ = obs_data_get_string(d, "gen_guest2");
   obs_data_array_t *arr = obs_data_get_array(d, "mappings");
   size_t n = arr ? obs_data_array_count(arr) : 0;
   mappings_.clear();
@@ -65,6 +84,7 @@ void Config::load() {
     obs_data_t *item = obs_data_array_item(arr, i);
     CamMapping m;
     m.audio_source = obs_data_get_string(item, "audio_source");
+    m.video_source = obs_data_get_string(item, "video_source");
     m.scene_name = obs_data_get_string(item, "scene_name");
     m.priority = str_prio(obs_data_get_string(item, "priority"));
     m.threshold_dbfs = (float)obs_data_get_double(item, "threshold_dbfs");
@@ -81,14 +101,20 @@ void Config::load() {
 void Config::save() const {
   obs_data_t *d = obs_data_create();
   obs_data_set_string(d, "responsiveness", resp_str(responsiveness_));
+  obs_data_set_string(d, "motion_influence", motion_inf_str(motion_influence_));
   obs_data_set_int(d, "hold_time_ms", hold_time_ms_);
   obs_data_set_string(d, "fallback_scene", fallback_scene_.c_str());
   obs_data_set_bool(d, "transition_fade", transition_fade_);
   obs_data_set_int(d, "fade_duration_ms", fade_duration_ms_);
+  obs_data_set_int(d, "gen_format", gen_format_);
+  obs_data_set_string(d, "gen_host", gen_host_.c_str());
+  obs_data_set_string(d, "gen_guest1", gen_guest1_.c_str());
+  obs_data_set_string(d, "gen_guest2", gen_guest2_.c_str());
   obs_data_array_t *arr = obs_data_array_create();
   for (const auto &m : mappings_) {
     obs_data_t *item = obs_data_create();
     obs_data_set_string(item, "audio_source", m.audio_source.c_str());
+    obs_data_set_string(item, "video_source", m.video_source.c_str());
     obs_data_set_string(item, "scene_name", m.scene_name.c_str());
     obs_data_set_string(item, "priority", prio_str(m.priority));
     obs_data_set_double(item, "threshold_dbfs", m.threshold_dbfs);

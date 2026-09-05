@@ -22,8 +22,16 @@ inline float responsiveness_alpha(Responsiveness r) {
     return 0.15f;
 }
 
+enum class MotionInfluence { Off = 0, Moderate = 1, High = 2 };
+inline float motion_influence_weight(MotionInfluence m) {
+    if (m == MotionInfluence::Moderate) return 0.5f;
+    if (m == MotionInfluence::High) return 1.5f;
+    return 0.0f;
+}
+
 struct CamMapping {
     std::string audio_source;
+    std::string video_source;
     std::string scene_name;
     Priority    priority        = Priority::Medium;
     float       threshold_dbfs  = -40.0f;
@@ -44,6 +52,7 @@ public:
     SwitchEngine();
     void set_mappings(std::vector<CamMapping> mappings);
     void set_responsiveness(Responsiveness r);
+    void set_motion_influence(MotionInfluence m);
     void set_hold_time_ms(int ms);
     void set_fallback_scene(const std::string &scene_name);
     void set_switch_callback(SwitchCallback cb);
@@ -52,12 +61,14 @@ public:
     void set_enabled(bool enabled);
     bool is_enabled() const { return enabled_; }
     std::vector<SourceLevels> get_levels() const;
+    std::string get_current_scene() const;
     void sync_current_scene(const std::string &scene);
 private:
     std::string try_switch();
     mutable std::mutex mutex_;
     std::vector<CamMapping> mappings_;
     Responsiveness responsiveness_ = Responsiveness::Neutral;
+    MotionInfluence motion_influence_ = MotionInfluence::Moderate;
     int hold_time_ms_ = 800;
     std::string fallback_scene_;
     SwitchCallback switch_cb_;

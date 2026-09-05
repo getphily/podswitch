@@ -31,6 +31,18 @@ static std::vector<std::string> get_audio_sources() {
       &r);
   return r;
 }
+static std::vector<std::string> get_video_sources() {
+  std::vector<std::string> r;
+  obs_enum_sources(
+      [](void *p, obs_source_t *s) -> bool {
+        auto *v = static_cast<std::vector<std::string> *>(p);
+        if (obs_source_get_output_flags(s) & OBS_SOURCE_VIDEO)
+          v->push_back(obs_source_get_name(s));
+        return true;
+      },
+      &r);
+  return r;
+}
 static std::vector<std::string> get_scene_names() {
   std::vector<std::string> r;
   char **n = obs_frontend_get_scene_names();
@@ -50,7 +62,7 @@ static void apply_config() {
   if (g_motion) g_motion->clear();
   for (auto &m : g_config->get_mappings()) {
     g_monitor->add_source(m.audio_source);
-    if (g_motion) g_motion->add_source(m.audio_source);
+    if (g_motion && !m.video_source.empty()) g_motion->add_source(m.video_source);
   }
   if (g_dock) {
     std::vector<std::pair<std::string, std::string>> pairs;
@@ -88,7 +100,7 @@ static void on_frontend_event(enum obs_frontend_event event, void *) {
       event == OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED) {
     apply_config();
     if (g_settings_dlg)
-      g_settings_dlg->populate_sources(get_audio_sources(), get_scene_names());
+      g_settings_dlg->populate_sources(get_audio_sources(), get_video_sources(), get_scene_names());
   } else if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED) {
     obs_source_t *scene = obs_frontend_get_current_scene();
     if (scene) {
@@ -97,8 +109,11 @@ static void on_frontend_event(enum obs_frontend_event event, void *) {
     }
   }
 }
+extern void podswitch_register_motion_filter();
+
 bool obs_module_load() {
   blog(LOG_INFO, "[podswitch] Loading PodSwitch v1.0.0");
+  podswitch_register_motion_filter();
   g_config = new Config();
   g_engine = new SwitchEngine();
   g_monitor = new AudioMonitor();
@@ -128,7 +143,7 @@ bool obs_module_load() {
                      }
                    });
   QObject::connect(g_dock, &AutoCamDock::open_settings_requested, []() {
-    g_settings_dlg->populate_sources(get_audio_sources(), get_scene_names());
+    g_settings_dlg->populate_sources(get_audio_sources(), get_video_sources(), get_scene_names());
     g_settings_dlg->show();
     g_settings_dlg->raise();
     g_settings_dlg->activateWindow();

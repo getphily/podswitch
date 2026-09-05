@@ -20,6 +20,10 @@ void SwitchEngine::set_responsiveness(Responsiveness r) {
   for (auto &m : mappings_)
     m.ema.alpha = alpha;
 }
+void SwitchEngine::set_motion_influence(MotionInfluence m) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  motion_influence_ = m;
+}
 void SwitchEngine::set_hold_time_ms(int ms) {
   std::lock_guard<std::mutex> l(mutex_);
   hold_time_ms_ = ms;
@@ -58,7 +62,7 @@ void SwitchEngine::on_audio_level(const std::string &source_name, float dbfs) {
 void SwitchEngine::update_motion_energy(const std::string &source_name, float energy) {
   std::lock_guard<std::mutex> lock(mutex_);
   for (auto &m : mappings_) {
-    if (m.audio_source == source_name) {
+    if (!m.video_source.empty() && m.video_source == source_name) {
       m.motion_energy = energy;
       break;
     }
@@ -72,20 +76,21 @@ std::string SwitchEngine::try_switch() {
   float best = -FLT_MAX;
   const CamMapping *winner = nullptr;
   int active_speakers = 0;
+  float motion_weight = motion_influence_weight(motion_influence_);
   for (const auto &m : mappings_) {
-    if (m.ema.value < m.threshold_dbfs)
-      continue;
-    active_speakers++;
-    float w = m.ema.value + priority_bias_db(m.priority);
-    if (w > best) {
-      best = w;
+    float score = m.ema.value + priority_bias_db(m.priority) +
+                  motion_weight * (m.motion_energy / 10.0f);
+    if (m.ema.value >= m.threshold_dbfs)
+      active_speakers++;
+    if (score > best) {
+      best = score;
       winner = &m;
     }
   }
   std::string target;
   if (active_speakers >= 2) {
     target = fallback_scene_;
-  } else if (active_speakers == 1 && winner) {
+  } else if (winner) {
     target = winner->scene_name;
   } else {
     target = fallback_scene_;
@@ -109,4 +114,8 @@ std::vector<SourceLevels> SwitchEngine::get_levels() const {
   for (const auto &m : mappings_)
     result.push_back({m.audio_source, m.ema.value, m.motion_energy});
   return result;
+}
+std::string SwitchEngine::get_current_scene() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return current_scene_;
 }
